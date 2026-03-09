@@ -11,6 +11,10 @@
 npm-debug.log
 yarn-error.log
 
+#env
+.env
+.env.*
+
 # IDEs and editors
 .idea/
 .project
@@ -44,3 +48,7 @@ __screenshots__/
 Thumbs.db
 
 /src/generated/pri
+
+
+.nx/cache
+.nx/workspace-data
