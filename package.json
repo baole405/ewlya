@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:ds-website": "node dist/ds-website/server/server.mjs"
+    "serve:ssr:ds-website": "node dist/ds-website/server/server.mjs",
+    "bot:dev": "tsx src/bot/main.ts"
   },
   "private": true,
   "packageManager": "npm@10.9.2",
@@ -20,7 +21,12 @@
     "@angular/platform-server": "^21.2.0",
     "@angular/router": "^21.2.0",
     "@angular/ssr": "^21.2.1",
+    "@prisma/client": "^6.4.1",
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.3.1",
     "express": "^5.1.0",
+    "pg": "^8.20.0",
+    "prisma": "^6.4.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
@@ -35,6 +41,8 @@
     "postcss": "^8.5.3",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.12",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
   }
