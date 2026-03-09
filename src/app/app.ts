@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { MemberService } from './services/member.service';
+import { MemberService } from './core/services/member.service';
 
 @Component({
   selector: 'app-root',
