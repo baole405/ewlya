@@ -1,3 +1,4 @@
+import { prisma } from '@ds/db';
 import {
   ActionRowBuilder,
   EmbedBuilder,
@@ -6,7 +7,6 @@ import {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
-import { prisma } from '../lib/prisma';
 import { CategoryKey, getOptionById, POINT_CONFIG } from '../services/point-calculator.service';
 
 export const name = Events.InteractionCreate;
