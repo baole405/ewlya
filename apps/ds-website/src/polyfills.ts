@@ -1,0 +1,1 @@
+/* Polyfills are now handled via project.json polyfills array */

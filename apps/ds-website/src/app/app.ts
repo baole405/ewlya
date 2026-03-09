@@ -1,12 +1,25 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
 import { MemberService } from './core/services/member.service';
+import { HlmButtonComponent } from './shared/ui/hlm-button.component';
+import {
+  HlmCardComponent,
+  HlmCardContentComponent,
+  HlmCardHeaderComponent,
+  HlmCardTitleComponent,
+} from './shared/ui/hlm-card.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [
+    CommonModule,
+    HlmButtonComponent,
+    HlmCardComponent,
+    HlmCardHeaderComponent,
+    HlmCardTitleComponent,
+    HlmCardContentComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
