@@ -11,7 +11,7 @@ node_modules
 npm-debug.log
 yarn-error.log
 
-#env
+# env
 .env
 .env.*
 
@@ -47,9 +47,8 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-/src/generated/pri
-
-
+# Prisma and Nx
 .nx/cache
 .nx/workspace-data
+/src/generated/prisma/
 node_modules
