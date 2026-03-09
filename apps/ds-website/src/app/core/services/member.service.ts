@@ -1,12 +1,16 @@
-import { Injectable, signal } from '@angular/core';
+import { isPlatformServer } from '@angular/common';
+import { Injectable, PLATFORM_ID, computed, inject, resource } from '@angular/core';
+import { prisma } from '@ds/db';
 import { Member } from '../models/member.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MemberService {
-  // Use Angular Signals for state management
-  private membersSignal = signal<Member[]>([
+  private platformId = inject(PLATFORM_ID);
+
+  // Mock data as fallback for client-side or if DB is empty
+  private mockMembers: Member[] = [
     {
       id: '1',
       nickname: 'Grimex',
@@ -47,14 +51,31 @@ export class MemberService {
       rank: 4,
       avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noctis',
     },
-  ]);
+  ];
 
-  // Expose the signal as a read-only computed or just the signal itself
-  members = this.membersSignal.asReadonly();
+  // Resource for fetching members (Prisma only on server)
+  private membersResource = resource({
+    loader: async () => {
+      if (isPlatformServer(this.platformId)) {
+        try {
+          const dbMembers = await prisma.member.findMany({
+            orderBy: { points: 'desc' },
+          });
 
-  constructor() {}
+          if (dbMembers.length > 0) {
+            return dbMembers as unknown as Member[];
+          }
+        } catch (error) {
+          console.error('Error fetching members from Prisma:', error);
+        }
+      }
+      return this.mockMembers;
+    },
+  });
+
+  members = computed(() => this.membersResource.value() ?? this.mockMembers);
 
   getTop3() {
-    return this.membersSignal().slice(0, 3);
+    return this.members().slice(0, 3);
   }
 }
