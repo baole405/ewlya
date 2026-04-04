@@ -1,0 +1,19 @@
+# Ignore everything
+*
+
+# Allow source code
+!apps/
+!libs/
+!package.json
+!pnpm-lock.yaml
+!tsconfig*.json
+!nx.json
+!jest.config.ts
+!jest.preset.js
+!eslint.config.mjs
+!.postcssrc.json
+
+# Ignore nested node_modules & dist
+**/node_modules
+**/dist
+**/.angular
