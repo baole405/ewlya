@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './pages/home/home.component';
-import { LeaderboardComponent } from './pages/leaderboard/leaderboard.component';
+import { HomeComponent } from '@ds/web/feature-home';
+import { LeaderboardComponent } from '@ds/web/feature-hof';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },

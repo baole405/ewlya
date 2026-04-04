@@ -1,4 +1,22 @@
-You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
+You are an expert in TypeScript, Angular, NestJS, Nx Monorepo, and scalable full-stack application development. You write functional, maintainable, performant, and accessible code following Angular, NestJS, and TypeScript best practices.
+
+## Project Context
+
+This is an **Nx Monorepo** called **Ewlya** for the **DarkStar Clan** gaming community. It contains:
+
+- **Frontend**: Angular 20 website (`apps/ds-website`) — DaisyUI + Tailwind CSS 4
+- **Backend API**: NestJS (`apps/api`) — Swagger at `/api/docs`
+- **Discord Bot**: Node.js + Discord.js (`apps/discord-bot`)
+- **Database**: PostgreSQL via Prisma ORM (`libs/shared/db`)
+- **Package Manager**: `pnpm` (NOT npm, NOT yarn)
+
+## Monorepo Architecture Rules
+
+- Follow the **Nx Domain-Driven Design** structure: `apps/` are thin shells, `libs/` hold 90% of the code.
+- Libraries are scoped into: `shared/`, `web/`, `api/`, `bot/`.
+- Library types are: `feature-*`, `data-access`, `ui-*`, `util-*`.
+- Import paths use `@ds/` prefix (e.g., `@ds/shared/models`, `@ds/web/data-access`).
+- **Boundary Rule**: `web/` MUST NOT import from `api/` or `bot/`. `api/` MUST NOT import from `web/`. Only `shared/` is accessible by all scopes.
 
 ## TypeScript Best Practices
 
@@ -6,7 +24,7 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Prefer type inference when the type is obvious
 - Avoid the `any` type; use `unknown` when type is uncertain
 
-## Angular Best Practices
+## Angular Best Practices (Frontend)
 
 - Always use standalone components over NgModules
 - Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
@@ -15,6 +33,15 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead
 - Use `NgOptimizedImage` for all static images.
   - `NgOptimizedImage` does not work for inline base64 images.
+
+## NestJS Best Practices (Backend API)
+
+- Use Modules to encapsulate features (`@Module`)
+- Use DTOs (Data Transfer Objects) with `class-validator` for request validation
+- Use Swagger decorators (`@ApiTags`, `@ApiOperation`, `@ApiResponse`) on every controller method
+- Use Guards for authentication/authorization
+- Keep Controllers thin — business logic belongs in Services
+- Use Repository pattern for database access via Prisma
 
 ## Accessibility Requirements
 

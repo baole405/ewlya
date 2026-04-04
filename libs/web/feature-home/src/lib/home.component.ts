@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MemberService } from '../../core/services/member.service';
+import { MemberService } from '@ds/web/data-access';
 
 @Component({
   selector: 'app-home',

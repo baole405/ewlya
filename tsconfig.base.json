@@ -1,0 +1,21 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ds/db": ["libs/shared/db/src/index.ts"],
+      "@ds/shared/models": ["libs/shared/models/src/index.ts"],
+      "@ds/shared/env": ["libs/shared/env/src/index.ts"],
+      "@ds/web/feature-home": ["libs/web/feature-home/src/index.ts"],
+      "@ds/web/feature-hof": ["libs/web/feature-hof/src/index.ts"],
+      "@ds/web/data-access": ["libs/web/data-access/src/index.ts"],
+      "@ds/api/feature-members": ["libs/api/feature-members/src/index.ts"]
+    }
+  }
+}

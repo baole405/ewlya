@@ -1,7 +1,7 @@
 import { isPlatformServer } from '@angular/common';
 import { Injectable, PLATFORM_ID, computed, inject, resource } from '@angular/core';
 import { prisma } from '@ds/db';
-import { Member } from '../models/member.model';
+import { Member } from '@ds/shared/models';
 
 @Injectable({
   providedIn: 'root',

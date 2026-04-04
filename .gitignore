@@ -52,3 +52,7 @@ Thumbs.db
 .nx/workspace-data
 /src/generated/prisma/
 node_modules
+
+.angular
+
+vitest.config.*.timestamp*

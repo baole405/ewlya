@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { MemberService } from '../../core/services/member.service';
-
+import { MemberService } from '@ds/web/data-access';
+import { Member } from '@ds/shared/models';
 @Component({
   selector: 'app-leaderboard',
   imports: [CommonModule],
@@ -128,13 +128,14 @@ export class LeaderboardComponent {
 
   searchTerm = signal('');
 
-  totalPoints = computed(() => this.members().reduce((sum, m) => sum + m.points, 0));
+
+  totalPoints = computed(() => this.members().reduce((sum: number, m: Member) => sum + m.points, 0));
 
   filteredMembers = computed(() => {
     const term = this.searchTerm().toLowerCase().trim();
     if (!term) return this.members();
     return this.members().filter(
-      (m) =>
+      (m: Member) =>
         m.nickname.toLowerCase().includes(term) ||
         m.ign.toLowerCase().includes(term) ||
         m.gsCode.toLowerCase().includes(term),
