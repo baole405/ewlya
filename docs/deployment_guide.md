@@ -53,16 +53,20 @@ Nếu thành công, bạn sẽ thấy message: `Your database is now in sync wit
 ### 7.2 Cấu hình Build
 Điền các thông tin sau:
 
-| Setting              | Value                                    |
-| :------------------- | :--------------------------------------- |
-| **Framework preset** | `None`                                   |
-| **Build command**    | `npx nx build ds-website`                |
-| **Build output**     | `dist/ds-website/browser`                |
-| **Root directory**   | `/` (để trống hoặc `/`)                  |
-| **Node version**     | `20` (set trong Environment Variables)   |
+| Setting              | Value                                         |
+| :------------------- | :-------------------------------------------- |
+| **Framework preset** | `None`                                        |
+| **Build command**    | `pnpm exec nx build ds-website`               |
+| **Build output**     | `dist/ds-website/browser`                     |
+| **Root directory**   | `/` (để trống hoặc `/`)                       |
 
 ### 7.3 Environment Variables (trên Cloudflare)
-Thêm biến môi trường (nếu FE cần gọi API):
+Thêm các biến môi trường sau trong phần **Settings → Environment Variables**:
+```
+NODE_VERSION = 20
+```
+
+Nếu FE cần gọi API:
 ```
 API_URL = https://your-api-on-render.onrender.com
 ```
@@ -75,58 +79,63 @@ Từ giờ mỗi lần `git push`, Cloudflare tự build lại.
 
 ## Bước 8: Deploy API + Bot lên Render (10 phút)
 
+> 💡 **Kiến trúc**: API Server và Discord Bot chạy **chung 1 process** (NestJS). Khi NestJS khởi động, nó đồng thời login Bot vào Discord. Chỉ cần **1 Free Web Service** duy nhất — **$0/tháng**.
+
 ### 8.1 Đăng ký Render
 1. Truy cập https://render.com → đăng ký bằng GitHub.
+2. Cài Render GitHub App: https://github.com/apps/render/installations/new → chọn repo `baole405/Ewlya`.
 
-### 8.2 Deploy API Server (Web Service)
+### 8.2 Deploy Web Service (API + Bot)
 1. Bấm **New** → **Web Service** → chọn repo `ewlya`.
 2. Cấu hình:
 
-| Setting              | Value                                    |
-| :------------------- | :--------------------------------------- |
-| **Name**             | `darkstar-api`                           |
-| **Region**           | `Singapore`                              |
-| **Runtime**          | `Docker`                                 |
-| **Dockerfile Path**  | `Dockerfile.api`                         |
-| **Instance Type**    | `Free` (hoặc Starter $7/mo)             |
+| Setting            | Value                                                                                              |
+| :----------------- | :------------------------------------------------------------------------------------------------- |
+| **Name**           | `darkstar-api`                                                                                     |
+| **Language**       | `Node`                                                                                             |
+| **Branch**         | `main`                                                                                             |
+| **Region**         | `Singapore (Southeast Asia)`                                                                       |
+| **Root Directory** | (để trống)                                                                                          |
+| **Build Command**  | `pnpm install --frozen-lockfile && npx prisma generate --schema=libs/shared/db/prisma/schema.prisma && pnpm exec nx build api` |
+| **Start Command**  | `node dist/apps/api/main.js`                                                                       |
+| **Instance Type**  | `Free`                                                                                             |
 
 3. Thêm **Environment Variables**:
-```
-DATABASE_URL    = (copy từ Supabase Transaction URL)
-DIRECT_URL      = (copy từ Supabase Session URL)
-PORT            = 3000
-```
-4. Bấm **Create Web Service**. Đợi build xong (~3-5 phút).
-5. Render cho bạn URL: `https://darkstar-api.onrender.com`
-6. Test Swagger: `https://darkstar-api.onrender.com/api/docs`
 
-### 8.3 Deploy Discord Bot (Background Worker)
-1. Bấm **New** → **Background Worker** → chọn repo `ewlya`.
-2. Cấu hình:
+| Name               | Value                                      |
+| :----------------- | :----------------------------------------- |
+| `DATABASE_URL`     | (copy từ Supabase Transaction URL)          |
+| `DIRECT_URL`       | (copy từ Supabase Session URL)              |
+| `PORT`             | `3000`                                      |
+| `NODE_VERSION`     | `20`                                        |
+| `DISCORD_TOKEN`    | (token thật của bot)                        |
+| `DISCORD_CLIENT_ID`| (client id thật)                            |
+| `GUILD_ID`         | `1179416079878078616`                       |
+| `HOF_CHANNEL_ID`   | `1202984856812781608`                       |
+| `TEST_CHANNEL_ID`  | `1424269975698407454`                       |
+| `CONTRIBUTE_LOGS_ID`| `1480461099504500849`                      |
 
-| Setting              | Value                                    |
-| :------------------- | :--------------------------------------- |
-| **Name**             | `darkstar-bot`                           |
-| **Region**           | `Singapore`                              |
-| **Runtime**          | `Docker`                                 |
-| **Dockerfile Path**  | `Dockerfile.bot`                         |
-| **Instance Type**    | `Free`                                   |
+4. **Advanced Settings**:
+   - **Health Check Path**: `/api`
+   - **Auto-Deploy**: `On Commit`
 
-3. Thêm **Environment Variables**:
-```
-DATABASE_URL       = (copy từ Supabase Transaction URL)
-DIRECT_URL         = (copy từ Supabase Session URL)
-DISCORD_TOKEN      = (token thật của bot)
-DISCORD_CLIENT_ID  = (client id thật)
-GUILD_ID           = 1179416079878078616
-HOF_CHANNEL_ID     = 1202984856812781608
-TEST_CHANNEL_ID    = 1424269975698407454
-CONTRIBUTE_LOGS_ID = 1480461099504500849
-```
-4. Bấm **Create Background Worker**.
+5. Bấm **Deploy Web Service**. Đợi build xong (~3-5 phút).
+6. Render cho bạn URL: `https://darkstar-api.onrender.com`
+7. Test Swagger: `https://darkstar-api.onrender.com/api/docs`
 
-> ⚠️ **Lưu ý**: Render Free tier cho Background Worker sẽ ngủ sau 15 phút không hoạt động.
-> Để Bot luôn thức, bạn có thể nâng lên Starter ($7/mo) hoặc dùng UptimeRobot ping mỗi 14 phút.
+### 8.3 Thiết lập UptimeRobot (Giữ Bot online 24/7)
+
+Render Free tier tự ngủ sau 15 phút không có request. Dùng UptimeRobot ping miễn phí để đánh thức:
+
+1. Truy cập https://uptimerobot.com → đăng ký miễn phí.
+2. Bấm **Add New Monitor**:
+   - **Monitor Type**: `HTTP(s)`
+   - **Friendly Name**: `DarkStar API`
+   - **URL**: `https://darkstar-api.onrender.com/api`
+   - **Monitoring Interval**: `5 minutes`
+3. Bấm **Create Monitor**.
+
+→ UptimeRobot sẽ ping API mỗi 5 phút → Render không bao giờ ngủ → Bot online 24/7. ✅
 
 ---
 
@@ -157,7 +166,7 @@ GUILD_ID           = 1179416079878078616
 ### 9.4 Sync với Render (Tự động)
 1. Trong Doppler → **Integrations** → **Render**.
 2. Chọn project `darkstar` → environment `prd`.
-3. Mapping tới Render service `darkstar-api` và `darkstar-bot`.
+3. Mapping tới Render service `darkstar-api`.
 4. Từ giờ, mỗi lần bạn đổi token ở Doppler → Render tự nhận biến mới, không cần vào từng service sửa tay.
 
 ---

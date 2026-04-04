@@ -44,11 +44,11 @@ nx serve api
 - API Base: http://localhost:3000/api
 - Swagger Docs: http://localhost:3000/api/docs
 
-### 🤖 Discord Bot
+### 🤖 Discord Bot (Embedded in API)
 
-```bash
-nx serve discord-bot
-```
+Bot được tích hợp trong API server. Khi chạy `nx serve api` với `DISCORD_TOKEN` trong `.env`, Bot sẽ tự động login.
+
+Nếu chỉ muốn chạy API không có Bot, xóa/comment `DISCORD_TOKEN` trong `.env`.
 
 ### 🚀 Run Frontend + Backend simultaneously
 
@@ -67,17 +67,17 @@ ewlya/
 │   │       ├── app.ts             # Root component (Navbar + RouterOutlet)
 │   │       └── app.html           # Root template
 │   │
-│   ├── api/                       # NestJS backend API server
+│   ├── api/                       # NestJS backend API + Bot (combined)
 │   │   └── src/
-│   │       ├── main.ts            # Bootstrap + Swagger setup
+│   │       ├── main.ts            # Bootstrap + Swagger + Bot auto-login
 │   │       └── app/
-│   │           ├── app.module.ts   # Root module → imports libs/api/*
+│   │           ├── app.module.ts   # Root module → imports api/* + bot/*
 │   │           ├── app.controller.ts
 │   │           └── app.service.ts
 │   │
 │   ├── api-e2e/                   # End-to-end tests for API
 │   │
-│   └── discord-bot/               # Discord.js bot worker
+│   └── discord-bot/               # (Legacy) Standalone bot — now embedded in API
 │
 ├── libs/                          # Shared libraries (90% of the code lives here)
 │   ├── shared/                    # [CROSS-CUTTING] Used by ALL apps
@@ -93,13 +93,17 @@ ewlya/
 │   ├── api/                       # [BACKEND ONLY] NestJS libraries
 │   │   └── feature-members/       # Members CRUD controller + service
 │   │
-│   └── bot/                       # [BOT ONLY] Discord command handlers
-│       └── (future)
+│   └── bot/                       # [BOT] Discord event handlers
+│       └── discord/               # DiscordBotModule + DiscordBotService
 │
 ├── docs/                          # Project documentation
-│   ├── architecture_overview.md   # System architecture diagram
-│   └── DarkStar_Clan_Profile.md   # Clan profile
+│   ├── SRS.md                     # Software Requirements Specification
+│   ├── system_diagrams.md         # C4 + Sequence diagrams (Mermaid)
+│   ├── deployment_guide.md        # Step-by-step cloud deployment
+│   ├── supabase_guide.md          # Supabase usage guide
+│   └── project_guide.md           # This file
 │
+├── Dockerfile.api                 # Docker build for API (optional)
 ├── docker-compose.yml             # Local PostgreSQL container
 ├── nx.json                        # Nx workspace configuration
 ├── package.json                   # Dependencies (packageManager: pnpm)
@@ -120,6 +124,7 @@ All libraries are accessible via the `@ds/` prefix. Defined in `tsconfig.base.js
 | `@ds/web/feature-hof`     | `libs/web/feature-hof/src/index.ts`    |
 | `@ds/web/data-access`     | `libs/web/data-access/src/index.ts`    |
 | `@ds/api/feature-members` | `libs/api/feature-members/src/index.ts`|
+| `@ds/bot/discord`         | `libs/bot/discord/src/index.ts`        |
 
 ## 6. Boundary Rules (ENFORCED)
 
@@ -128,6 +133,7 @@ web/  → CAN import from shared/    ✅
 web/  → CANNOT import from api/    ❌
 web/  → CANNOT import from bot/    ❌
 api/  → CAN import from shared/    ✅
+api/  → CAN import from bot/       ✅  (API hosts the bot)
 api/  → CANNOT import from web/    ❌
 bot/  → CAN import from shared/    ✅
 bot/  → CANNOT import from web/    ❌
@@ -137,22 +143,22 @@ bot/  → CANNOT import from web/    ❌
 
 | Command                                          | Description                                |
 | :----------------------------------------------- | :----------------------------------------- |
-| `nx serve ds-website`                            | Start frontend dev server (port 4200)      |
-| `nx serve api`                                   | Start backend API server (port 3000)       |
-| `nx run-many -t serve -p ds-website api --parallel` | Start FE + BE simultaneously            |
-| `nx build ds-website`                            | Production build of frontend               |
-| `nx build api`                                   | Production build of backend                |
-| `nx lint ds-website`                             | Lint frontend code                         |
-| `nx test ds-website`                             | Run frontend unit tests                    |
-| `nx graph`                                       | Open interactive project dependency graph  |
-| `nx affected -t test`                            | Only test projects affected by your changes|
+| `nx serve ds-website`                            | Start frontend dev server (port 4200)       |
+| `nx serve api`                                   | Start API + Bot server (port 3000)          |
+| `nx run-many -t serve -p ds-website api --parallel` | Start FE + API+Bot simultaneously        |
+| `pnpm exec nx build ds-website`                  | Production build of frontend                |
+| `pnpm exec nx build api`                         | Production build of API+Bot                 |
+| `nx lint ds-website`                             | Lint frontend code                          |
+| `nx test ds-website`                             | Run frontend unit tests                     |
+| `nx graph`                                       | Open interactive project dependency graph   |
+| `nx affected -t test`                            | Only test projects affected by your changes |
 
 ## 8. Deployment Targets
 
-| Service          | Platform              | Build Command        | Output                    |
-| :--------------- | :-------------------- | :------------------- | :------------------------ |
-| Frontend (Web)   | Cloudflare Pages      | `nx build ds-website`| `dist/ds-website/browser` |
-| Backend (API)    | Render / Railway      | `nx build api`       | `dist/apps/api/main.js`   |
-| Discord Bot      | Render / Railway      | `nx build discord-bot`| `dist/apps/discord-bot`  |
-| Database         | Supabase / Aiven      | N/A (Managed)        | N/A                       |
-| Secrets          | Doppler               | N/A                  | N/A                       |
+| Service          | Platform              | Build Command                     | Output                    |
+| :--------------- | :-------------------- | :-------------------------------- | :------------------------ |
+| Frontend (Web)   | Cloudflare Pages      | `pnpm exec nx build ds-website`   | `dist/ds-website/browser` |
+| API + Bot        | Render (Free)         | `pnpm exec nx build api`          | `dist/apps/api/main.js`   |
+| Database         | Supabase              | N/A (Managed)                     | N/A                       |
+| Uptime Monitor   | UptimeRobot           | N/A                               | Ping every 5 min          |
+| Secrets          | Doppler               | N/A                               | N/A                       |

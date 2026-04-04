@@ -15,7 +15,8 @@
       "@ds/web/feature-home": ["libs/web/feature-home/src/index.ts"],
       "@ds/web/feature-hof": ["libs/web/feature-hof/src/index.ts"],
       "@ds/web/data-access": ["libs/web/data-access/src/index.ts"],
-      "@ds/api/feature-members": ["libs/api/feature-members/src/index.ts"]
+      "@ds/api/feature-members": ["libs/api/feature-members/src/index.ts"],
+      "@ds/bot/discord": ["libs/bot/discord/src/index.ts"]
     }
   }
 }
