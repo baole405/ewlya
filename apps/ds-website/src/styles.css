@@ -1,34 +1,42 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @plugin "daisyui";
 
 @plugin "daisyui/theme" {
-  name: 'bumblebee';
+  name: 'darkstar';
   default: true;
-  prefersdark: false;
-  color-scheme: 'light';
-  --color-base-100: oklch(100% 0 0);
-  --color-base-200: oklch(97% 0 0);
-  --color-base-300: oklch(92% 0 0);
-  --color-base-content: oklch(20% 0 0);
-  --color-primary: oklch(85% 0.199 91.936);
-  --color-primary-content: oklch(42% 0.095 57.708);
-  --color-secondary: oklch(75% 0.183 55.934);
-  --color-secondary-content: oklch(40% 0.123 38.172);
-  --color-accent: oklch(0% 0 0);
-  --color-accent-content: oklch(100% 0 0);
-  --color-neutral: oklch(37% 0.01 67.558);
-  --color-neutral-content: oklch(92% 0.003 48.717);
-  --color-info: oklch(74% 0.16 232.661);
-  --color-info-content: oklch(39% 0.09 240.876);
-  --color-success: oklch(76% 0.177 163.223);
-  --color-success-content: oklch(37% 0.077 168.94);
-  --color-warning: oklch(82% 0.189 84.429);
-  --color-warning-content: oklch(41% 0.112 45.904);
-  --color-error: oklch(70% 0.191 22.216);
-  --color-error-content: oklch(39% 0.141 25.723);
-  --radius-selector: 1rem;
-  --radius-field: 0.5rem;
-  --radius-box: 1rem;
+  prefersdark: true;
+  color-scheme: 'dark';
+  /* Deep dark base */
+  --color-base-100: oklch(8% 0 0);
+  --color-base-200: oklch(11% 0 0);
+  --color-base-300: oklch(16% 0 0);
+  --color-base-content: oklch(93% 0.01 90);
+  /* Royal Gold primary */
+  --color-primary: oklch(82% 0.165 85);
+  --color-primary-content: oklch(15% 0.04 85);
+  /* Warm White secondary */
+  --color-secondary: oklch(92% 0.02 90);
+  --color-secondary-content: oklch(20% 0 0);
+  /* Celestial accent */
+  --color-accent: oklch(72% 0.14 250);
+  --color-accent-content: oklch(95% 0.02 250);
+  /* Neutral */
+  --color-neutral: oklch(22% 0.005 60);
+  --color-neutral-content: oklch(85% 0.01 90);
+  /* Semantic */
+  --color-info: oklch(74% 0.16 232);
+  --color-info-content: oklch(93% 0.02 232);
+  --color-success: oklch(76% 0.177 163);
+  --color-success-content: oklch(93% 0.02 163);
+  --color-warning: oklch(82% 0.189 84);
+  --color-warning-content: oklch(20% 0.04 84);
+  --color-error: oklch(65% 0.2 25);
+  --color-error-content: oklch(93% 0.02 25);
+  /* Radii */
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
@@ -39,13 +47,105 @@
 @layer base {
   body {
     @apply bg-base-100 text-base-content antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: oklch(8% 0 0);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(30% 0.04 85);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(50% 0.1 85);
   }
 }
 
 :root {
-  font-family:
-    'Inter',
-    system-ui,
-    -apple-system,
-    sans-serif;
+  --font-heading: 'Bebas Neue', 'Impact', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
+}
+
+/* Utility classes for the design system */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.text-glow-gold {
+  text-shadow:
+    0 0 20px oklch(82% 0.165 85 / 0.4),
+    0 0 40px oklch(82% 0.165 85 / 0.2);
+}
+
+.text-glow-white {
+  text-shadow:
+    0 0 20px oklch(95% 0 0 / 0.3),
+    0 0 60px oklch(95% 0 0 / 0.1);
+}
+
+.glow-border-gold {
+  box-shadow:
+    0 0 15px oklch(82% 0.165 85 / 0.15),
+    inset 0 0 15px oklch(82% 0.165 85 / 0.05);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Keyframe animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s ease-out both;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(82% 0.165 85 / 0) 0%,
+    oklch(82% 0.165 85 / 0.3) 50%,
+    oklch(82% 0.165 85 / 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
 }
