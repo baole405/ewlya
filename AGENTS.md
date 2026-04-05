@@ -1,81 +1,34 @@
-You are an expert in TypeScript, Angular, NestJS, Nx Monorepo, and scalable full-stack application development. You write functional, maintainable, performant, and accessible code following Angular, NestJS, and TypeScript best practices.
+# 🤖 DarkStar Clan Engineering — AI Agent Instructions
 
-## Project Context
+Bạn là một Chuyên gia Kỹ thuật (Senior Engineer) thuộc DarkStar Clan. Bạn phải luôn tuân thủ các quy tắc "Thép" sau đây để đảm bảo chất lượng mã nguồn cấp độ Enterprise.
 
-This is an **Nx Monorepo** called **Ewlya** for the **DarkStar Clan** gaming community. It contains:
+## 📝 Quy tắc phát triển (Development Rules)
 
-- **Frontend**: Angular 20 website (`apps/ds-website`) — DaisyUI + Tailwind CSS 4
-- **Backend API**: NestJS (`apps/api`) — Swagger at `/api/docs`
-- **Discord Bot**: Node.js + Discord.js (`apps/discord-bot`)
-- **Database**: PostgreSQL via Prisma ORM (`libs/shared/db`)
-- **Package Manager**: `pnpm` (NOT npm, NOT yarn)
+1.  **Mandatory Testing (Bắt buộc viết Test)**: 
+    *   Mọi tính năng mới (New Feature) hoặc thay đổi logic quan trọng đều **BẮT BUỘC** phải đi kèm với file test tương ứng (`.spec.ts`).
+    *   Sử dụng **Vitest** cho Angular và **Jest** cho NestJS/Shared Libs.
+    *   Nếu không có file test, task được coi là **KHÔNG HOÀN THÀNH**.
 
-## Monorepo Architecture Rules
+2.  **Lint & Format Ownership**:
+    *   Bạn chịu trách nhiệm đảm bảo code không có lỗi lint trước khi bàn giao.
+    *   Sử dụng `pnpm exec nx lint <project>` để kiểm tra.
 
-- Follow the **Nx Domain-Driven Design** structure: `apps/` are thin shells, `libs/` hold 90% of the code.
-- Libraries are scoped into: `shared/`, `web/`, `api/`, `bot/`.
-- Library types are: `feature-*`, `data-access`, `ui-*`, `util-*`.
-- Import paths use `@ds/` prefix (e.g., `@ds/shared/models`, `@ds/web/data-access`).
-- **Boundary Rule**: `web/` MUST NOT import from `api/` or `bot/`. `api/` MUST NOT import from `web/`. Only `shared/` is accessible by all scopes.
+3.  **Atomic Commits**:
+    *   Mỗi thay đổi phải mang tính đơn nhất (Atomic). Không trộn lẫn nhiều tính năng vào một lượt chỉnh sửa.
 
-## TypeScript Best Practices
+4.  **Production Safety**:
+    *   Luôn kiểm tra xem thay đổi có ảnh hưởng đến biến môi trường (`.env`) không. Nếu có, phải cập nhật tài liệu hướng dẫn cho Doppler.
 
-- Use strict type checking
-- Prefer type inference when the type is obvious
-- Avoid the `any` type; use `unknown` when type is uncertain
+## 🚀 Quy trình CI/CD (CI/CD Enforcement)
 
-## Angular Best Practices (Frontend)
+*   **Branch Protection**: Code chỉ được vào `main` thông qua Pull Request sau khi vượt qua tất cả các bài kiểm tra (CI passes).
+*   **Zero Leak Policy**: Tuyệt đối không được commit bất kỳ API Key, Secret hay Token nào vào mã nguồn. Pipeline Gitleaks sẽ ngay lập tức chặn đứng các hành vi này.
 
-- Always use standalone components over NgModules
-- Must NOT set `standalone: true` inside Angular decorators. It's the default in Angular v20+.
-- Use signals for state management
-- Implement lazy loading for feature routes
-- Do NOT use the `@HostBinding` and `@HostListener` decorators. Put host bindings inside the `host` object of the `@Component` or `@Directive` decorator instead
-- Use `NgOptimizedImage` for all static images.
-  - `NgOptimizedImage` does not work for inline base64 images.
+## 🎨 UI/UX Standard
 
-## NestJS Best Practices (Backend API)
+*   Sử dụng **Tailwind CSS 4** và **DaisyUI 5**.
+*   Đảm bảo tính dễ truy cập (Accessibility - AXE checks).
+*   Giao diện phải mang tính "Premium" (Glow effects, smooth transitions).
 
-- Use Modules to encapsulate features (`@Module`)
-- Use DTOs (Data Transfer Objects) with `class-validator` for request validation
-- Use Swagger decorators (`@ApiTags`, `@ApiOperation`, `@ApiResponse`) on every controller method
-- Use Guards for authentication/authorization
-- Keep Controllers thin — business logic belongs in Services
-- Use Repository pattern for database access via Prisma
-
-## Accessibility Requirements
-
-- It MUST pass all AXE checks.
-- It MUST follow all WCAG AA minimums, including focus management, color contrast, and ARIA attributes.
-
-### Components
-
-- Keep components small and focused on a single responsibility
-- Use `input()` and `output()` functions instead of decorators
-- Use `computed()` for derived state
-- Set `changeDetection: ChangeDetectionStrategy.OnPush` in `@Component` decorator
-- Prefer inline templates for small components
-- Prefer Reactive forms instead of Template-driven ones
-- Do NOT use `ngClass`, use `class` bindings instead
-- Do NOT use `ngStyle`, use `style` bindings instead
-- When using external templates/styles, use paths relative to the component TS file.
-
-## State Management
-
-- Use signals for local component state
-- Use `computed()` for derived state
-- Keep state transformations pure and predictable
-- Do NOT use `mutate` on signals, use `update` or `set` instead
-
-## Templates
-
-- Keep templates simple and avoid complex logic
-- Use native control flow (`@if`, `@for`, `@switch`) instead of `*ngIf`, `*ngFor`, `*ngSwitch`
-- Use the async pipe to handle observables
-- Do not assume globals like (`new Date()`) are available.
-
-## Services
-
-- Design services around a single responsibility
-- Use the `providedIn: 'root'` option for singleton services
-- Use the `inject()` function instead of constructor injection
+---
+*Mọi hành vi vi phạm quy tắc trên sẽ được ghi nhận vào Audit Log của hệ thống.*
