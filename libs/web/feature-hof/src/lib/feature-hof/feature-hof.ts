@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'lib-feature-hof',
+  selector: 'ds-feature-hof',
   imports: [],
   templateUrl: './feature-hof.html',
   styleUrl: './feature-hof.css',
