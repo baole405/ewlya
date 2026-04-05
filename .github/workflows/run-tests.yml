@@ -9,6 +9,9 @@ jobs:
   test:
     name: 🧪 Jest Affected Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,9 +30,8 @@ jobs:
 
       - uses: nrwl/nx-set-shas@v4
 
-      - name: 🔐 Install Doppler CLI
-        run: |
-          (curl -Ls https://get.doppler.com/gui/install.sh || wget -qO- https://get.doppler.com/gui/install.sh) | sudo sh
+      - name: 🔐 Setup Doppler CLI
+        uses: dopplerhq/cli-action@v3
 
       - name: ⚙️ Prisma Generate
         run: npx prisma generate --schema=libs/shared/db/prisma/schema.prisma

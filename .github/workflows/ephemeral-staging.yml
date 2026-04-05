@@ -7,12 +7,14 @@ jobs:
   smoke-test:
     name: 🏗️ Stress & Smoke Test (Docker 4x)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🔐 Install Doppler CLI
-        run: |
-          (curl -Ls https://get.doppler.com/gui/install.sh || wget -qO- https://get.doppler.com/gui/install.sh) | sudo sh
+      - name: 🔐 Setup Doppler CLI
+        uses: dopplerhq/cli-action@v3
 
       - name: 🌀 Build Stress Test (4x Loop)
         run: |
@@ -24,19 +26,26 @@ jobs:
       - name: 💨 Smoke Test (Docker Compose)
         run: |
           # Start Ephemeral Env
-          docker-compose -f docker-compose.test.yml up -d
+          docker compose -f docker-compose.test.yml up -d
           
           # Wait for Healthcheck
-          echo "Waiting for API Healthcheck..."
-          sleep 15
+          echo "Waiting for API Healthcheck/Startup..."
+          sleep 20
+          
+          # Show running containers for debug
+          docker ps
+          
+          # Dynamic detect container name (since project name varies in CI)
+          CONTAINER_NAME=$(docker ps --filter "ancestor=darkstar-api:stress" --format "{{.Names}}")
+          echo "Detected container: $CONTAINER_NAME"
           
           # Check Status
-          if docker inspect smoke-test-api-1 | grep -q '"Status": "healthy"'; then
+          if [ -n "$CONTAINER_NAME" ] && docker inspect "$CONTAINER_NAME" | grep -q '"Status": "healthy"'; then
             echo "✅ Ephemeral environment is healthy!"
-            docker-compose -f docker-compose.test.yml down
+            docker compose -f docker-compose.test.yml down
           else
             echo "❌ Smoke test failed: API is not healthy!"
-            docker logs smoke-test-api-1
-            docker-compose -f docker-compose.test.yml down
+            [ -n "$CONTAINER_NAME" ] && docker logs "$CONTAINER_NAME"
+            docker compose -f docker-compose.test.yml down
             exit 1
           fi
