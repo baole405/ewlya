@@ -1,81 +1,66 @@
-import { isPlatformServer } from '@angular/common';
-import { Injectable, PLATFORM_ID, computed, inject, resource } from '@angular/core';
-import { prisma } from '@ds/db';
+import { Injectable, inject, signal, computed } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Member } from '@ds/shared/models';
+import { firstValueFrom } from 'rxjs';
+import { API_URL } from './api-url.token';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MemberService {
-  private platformId = inject(PLATFORM_ID);
+  private http = inject(HttpClient);
+  private apiUrl = inject(API_URL);
 
-  // Mock data as fallback for client-side or if DB is empty
-  private mockMembers: Member[] = [
-    {
-      id: '1',
-      nickname: 'Grimex',
-      ign: 'Grimex GS',
-      discordId: '123456789',
-      gsCode: 'GS-1234',
-      points: 2500,
-      rank: 1,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grimex',
-    },
-    {
-      id: '2',
-      nickname: 'Bahan',
-      ign: 'Bahan DS',
-      discordId: '987654321',
-      gsCode: 'GS-5678',
-      points: 2450,
-      rank: 2,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bahan',
-    },
-    {
-      id: '3',
-      nickname: 'DarkStar_Fan',
-      ign: 'DS_Fan',
-      discordId: '555555555',
-      gsCode: 'GS-9999',
-      points: 1800,
-      rank: 3,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fan',
-    },
-    {
-      id: '4',
-      nickname: 'Noctis',
-      ign: 'NoctisGS',
-      discordId: '111222333',
-      gsCode: 'GS-8888',
-      points: 1200,
-      rank: 4,
-      avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noctis',
-    },
-  ];
+  // State
+  private _members = signal<Member[]>([]);
+  private _loading = signal<boolean>(false);
 
-  // Resource for fetching members (Prisma only on server)
-  private membersResource = resource({
-    loader: async () => {
-      if (isPlatformServer(this.platformId)) {
-        try {
-          const dbMembers = await prisma.member.findMany({
-            orderBy: { points: 'desc' },
-          });
+  members = computed(() => this._members());
+  isLoading = computed(() => this._loading());
 
-          if (dbMembers.length > 0) {
-            return dbMembers as unknown as Member[];
-          }
-        } catch (error) {
-          console.error('Error fetching members from Prisma:', error);
-        }
-      }
-      return this.mockMembers;
-    },
-  });
+  /**
+   * Tải danh sách thành viên từ API
+   */
+  async loadMembers() {
+    this._loading.set(true);
+    try {
+      const data = await firstValueFrom(this.http.get<Member[]>(this.apiUrl));
+      this._members.set(data);
+    } catch (error) {
+      console.error('Failed to load members', error);
+    } finally {
+      this._loading.set(false);
+    }
+  }
 
-  members = computed(() => this.membersResource.value() ?? this.mockMembers);
+  /**
+   * Cập nhật thông tin thành viên (Thay thế Google Sheets)
+   */
+  async updateMember(id: string, data: Partial<Member>) {
+    const updated = await firstValueFrom(this.http.patch<Member>(`${this.apiUrl}/${id}`, data));
+    this._members.update(ms => ms.map(m => m.id === id ? updated : m));
+    return updated;
+  }
+
+  /**
+   * Cập nhật điểm có kèm lý do (Audit Log)
+   */
+  async updatePoints(id: string, payload: { points: number; reason: string }) {
+    const updated = await firstValueFrom(this.http.patch<Member>(`${this.apiUrl}/${id}/points`, payload));
+    this._members.update(ms => ms.map(m => m.id === id ? updated : m));
+    return updated;
+  }
+
+  /**
+   * Thêm thành viên mới
+   */
+  async createMember(data: Partial<Member>) {
+    const created = await firstValueFrom(this.http.post<Member>(this.apiUrl, data));
+    this._members.update(ms => [...ms, created]);
+    return created;
+  }
 
   getTop3() {
-    return this.members().slice(0, 3);
+    return computed(() => this.members().slice(0, 3));
   }
 }

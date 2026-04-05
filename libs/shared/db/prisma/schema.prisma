@@ -8,6 +8,12 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Role {
+  ADMIN
+  MEMBER
+  MODERATOR
+}
+
 model Member {
   id        String   @id @default(cuid())
   discordId String   @unique
@@ -16,6 +22,16 @@ model Member {
   points    Int      @default(0)
   gsCode    String?
   avatarUrl String?
+  role      Role     @default(MEMBER)
+  
+  // Fields from Google Sheets
+  gender    String?
+  birthdate DateTime?
+  age       Int?
+  country   String?
+  aka       String?  // Biệt danh khác
+  status    String   @default("ACTIVE") // ACTIVE, FORMER
+  
   submissions Submission[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -26,11 +42,12 @@ model Submission {
   memberId   String
   member     Member   @relation(fields: [memberId], references: [id])
   mission    String
-  rank       Int
+  reason     String?  // Lý do cập nhật điểm
+  rank       Int?
   points     Int
   seasonId   String
   season     Season   @relation(fields: [seasonId], references: [id])
-  verifiedBy String
+  verifiedBy String   // Discord ID of admin who verified
   createdAt  DateTime @default(now())
 }
 

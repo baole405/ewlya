@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { AuthService, DISCORD_LOGIN_URL } from '@ds/web/data-access';
 
 @Component({
   selector: 'app-root',
@@ -12,6 +13,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
   },
 })
 export class App {
+  auth = inject(AuthService);
+  discordLoginUrl = inject(DISCORD_LOGIN_URL);
   title = 'ds-website';
   sidebarOpen = signal(false);
 

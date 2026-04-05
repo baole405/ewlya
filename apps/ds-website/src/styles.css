@@ -33,13 +33,35 @@
   --color-warning-content: oklch(20% 0.04 84);
   --color-error: oklch(65% 0.2 25);
   --color-error-content: oklch(93% 0.02 25);
+  
+  /* Spartan UI (shadcn) variables mapping */
+  --background: 8% 0 0;
+  --foreground: 93% 0.01 90;
+  --muted: 15% 0 0;
+  --muted-foreground: 55% 0 0;
+  --popover: 10% 0 0;
+  --popover-foreground: 93% 0.01 90;
+  --border: 20% 0 0;
+  --input: 20% 0 0;
+  --card: 10% 0 0;
+  --card-foreground: 93% 0.01 90;
+  --primary: 82% 0.165 85;
+  --primary-foreground: 15% 0.04 85;
+  --secondary: 22% 0.005 60;
+  --secondary-foreground: 93% 0.01 90;
+  --accent: 82% 0.165 85;
+  --accent-foreground: 15% 0.04 85;
+  --destructive: 65% 0.2 25;
+  --destructive-foreground: 93% 0.02 25;
+  --ring: 82% 0.165 85;
+  --radius: 0.5rem;
+
   /* Radii */
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
-  --border: 1px;
   --depth: 1;
   --noise: 0;
 }
