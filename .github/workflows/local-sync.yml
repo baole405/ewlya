@@ -1,0 +1,22 @@
+name: 🔄 Local Docker Sync
+
+on:
+  workflow_run:
+    workflows: ["🧪 Run Unit Tests"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy-local:
+    name: 🚀 Sync Local Docker
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: self-hosted
+    steps:
+      - name: 🔐 Setup Local Env
+        run: echo "🚀 Preparing local deployment..."
+
+      - name: 🌀 Docker Pull & Restart (Local)
+        run: |
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
+          echo "✅ Local Environment Synced!"

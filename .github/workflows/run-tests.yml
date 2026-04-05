@@ -1,0 +1,45 @@
+name: 🧪 Run Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: 🧪 Jest Affected Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: nrwl/nx-set-shas@v4
+
+      - name: 🔐 Install Doppler CLI
+        run: |
+          (curl -Ls https://get.doppler.com/gui/install.sh || wget -qO- https://get.doppler.com/gui/install.sh) | sudo sh
+
+      - name: ⚙️ Prisma Generate
+        run: npx prisma generate --schema=libs/shared/db/prisma/schema.prisma
+
+      - name: 🧪 Nx Affected Test
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          if [ -n "${{ secrets.DOPPLER_TOKEN }}" ]; then
+            doppler run -- npx nx affected -t test --parallel=3
+          else
+            npx nx affected -t test --parallel=3
+          fi
