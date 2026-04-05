@@ -13,6 +13,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🛡️ Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: pnpm/action-setup@v3
         with:
           version: 9
@@ -23,9 +28,22 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
+      
+      - name: 🔐 Install Doppler CLI
+        run: |
+          (curl -Ls https://get.doppler.com/gui/install.sh || wget -qO- https://get.doppler.com/gui/install.sh) | sudo sh
+
       - uses: nrwl/nx-set-shas@v4
 
-      # This line is needed for projects that use Prisma
-      - run: npx prisma generate --schema=libs/shared/db/prisma/schema.prisma
+      - name: ⚙️ Prisma Generate
+        run: npx prisma generate --schema=libs/shared/db/prisma/schema.prisma
 
-      - run: npx nx affected -t lint test build --parallel=3
+      - name: 🚀 Nx Affected Check (Intelligent Pipeline)
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          if [ -n "$DOPPLER_TOKEN" ]; then
+            doppler run -- npx nx affected -t lint test build --parallel=3
+          else
+            npx nx affected -t lint test build --parallel=3
+          fi

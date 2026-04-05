@@ -11,7 +11,14 @@
     "bot:dev": "tsx src/bot/main.ts",
     "affected:lint": "nx affected -t lint",
     "affected:test": "nx affected -t test",
-    "affected:build": "nx affected -t build"
+    "affected:build": "nx affected -t build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,html,css}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   },
   "private": true,
   "packageManager": "pnpm@9.0.0",
@@ -108,6 +115,8 @@
     "typescript-eslint": "^8.40.0",
     "vite": "^7.0.0",
     "vitest": "^4.0.8",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "husky": "^9.1.5",
+    "lint-staged": "^15.2.10"
   }
 }
