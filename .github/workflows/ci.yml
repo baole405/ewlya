@@ -42,8 +42,41 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
         run: |
-          if [ -n "$DOPPLER_TOKEN" ]; then
+          if [ -n "${{ secrets.DOPPLER_TOKEN }}" ]; then
             doppler run -- npx nx affected -t lint test build --parallel=3
           else
             npx nx affected -t lint test build --parallel=3
+          fi
+
+  stress-test:
+    name: 🏗️ Stress & Smoke Test (Docker 4x)
+    needs: main
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 🔐 Install Doppler CLI
+        run: |
+          (curl -Ls https://get.doppler.com/gui/install.sh || wget -qO- https://get.doppler.com/gui/install.sh) | sudo sh
+      - name: 🌀 Build Stress Test (4x Loop)
+        run: |
+          for i in {1..4}; do
+            echo "Build attempt $i/4..."
+            docker build -t darkstar-api:stress -f Dockerfile.api .
+          done
+      - name: 💨 Smoke Test (Production Readiness)
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+        run: |
+          docker run -d --name smoke-test -p 3000:3000 \
+            -e DATABASE_URL="mock" -e JWT_SECRET="test" \
+            darkstar-api:stress
+          sleep 10
+          if curl -s localhost:3000/api/members > /dev/null; then
+            echo "✅ Smoke test passed!"
+            docker stop smoke-test && docker rm smoke-test
+          else
+            echo "❌ Smoke test failed!"
+            docker logs smoke-test
+            exit 1
           fi

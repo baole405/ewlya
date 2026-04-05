@@ -11,7 +11,8 @@ Bạn là một Chuyên gia Kỹ thuật (Senior Engineer) thuộc DarkStar Clan
 
 2.  **Lint & Format Ownership**:
     *   Bạn chịu trách nhiệm đảm bảo code không có lỗi lint trước khi bàn giao.
-    *   Sử dụng `pnpm exec nx lint <project>` để kiểm tra.
+    *   Hệ thống Husky + lint-staged sẽ tự động chạy `eslint --fix` và `prettier --write` mỗi khi bạn commit.
+    *   Nếu muốn tự chạy thủ công trên toàn bộ project: Sử dụng `pnpm exec nx affected -t lint --fix`.
 
 3.  **Atomic Commits**:
     *   Mỗi thay đổi phải mang tính đơn nhất (Atomic). Không trộn lẫn nhiều tính năng vào một lượt chỉnh sửa.

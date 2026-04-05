@@ -1,6 +1,4 @@
-import { isPlatformServer } from '@angular/common';
 import { Injectable, PLATFORM_ID, computed, inject, resource } from '@angular/core';
-import { prisma } from '@ds/db';
 import { Member } from '@ds/shared/models';
 
 @Injectable({
@@ -56,6 +54,9 @@ export class MemberService {
   // Resource for fetching members (Prisma only on server)
   private membersResource = resource({
     loader: async () => {
+      /* 
+      // ❌ ILLEGAL: Prisma không khả dụng trong trình duyệt.
+      // Cần thay thế bằng một yêu cầu HTTP đến API Render trong tương lai.
       if (isPlatformServer(this.platformId)) {
         try {
           const dbMembers = await prisma.member.findMany({
@@ -69,6 +70,7 @@ export class MemberService {
           console.error('Error fetching members from Prisma:', error);
         }
       }
+      */
       return this.mockMembers;
     },
   });
