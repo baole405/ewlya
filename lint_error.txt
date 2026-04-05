@@ -1,0 +1,22 @@
+
+[2m> [22m[2mnx run[22m feature-hof:lint --no-cache
+
+Linting "feature-hof"...
+[0m[0m
+[0m[4mC:\Users\thinkbook\Documents\code\discord\ewlya\libs\web\feature-hof\src\lib\feature-hof\feature-hof.ts[24m[0m
+[0m  [2m4:13[22m  [31merror[39m  The selector should start with one of these prefixes: "ds" (https://angular.dev/style-guide#choosing-component-selectors)  [2m@angular-eslint/component-selector[22m[0m
+[0m[0m
+[0m[31m[1mΓ£û 1 problem (1 error, 0 warnings)[22m[39m[0m
+[0m[31m[1m[22m[39m[0m
+Γ£û 1 problem (1 error, 0 warnings)
+
+[2m[31m[39m[22m
+
+[7m[1m[31m NX [39m[22m[27m  [31mRunning target [1mlint[22m for project feature-hof failed[39m
+
+[2mFailed tasks:[22m
+
+[2m-[22m feature-hof:lint
+
+[2mHint: run the command with[22m --verbose [2mfor more details.[22m
+
