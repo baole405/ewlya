@@ -13,13 +13,15 @@ export const prisma = (() => {
   }
 
   if (!prismaInstance) {
+    const databaseUrl = typeof process !== 'undefined' ? process.env['DATABASE_URL'] : undefined;
+
     prismaInstance = new PrismaClient({
       datasources: {
         db: {
-          url: process.env['DATABASE_URL'],
+          url: databaseUrl,
         },
       },
-    } as any);
+    });
   }
   return prismaInstance;
 })() as PrismaClient;
