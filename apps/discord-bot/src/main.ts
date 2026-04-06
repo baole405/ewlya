@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import 'dotenv/config';
 import * as interactionCreate from './events/interactionCreate';
 import * as messageReactionAdd from './events/messageReactionAdd';
+import * as messageCreate from './events/messageCreate';
 import * as ready from './events/ready';
 
 console.log('🤖 DarkStar Bot is initializing (Modular Mode)...');
@@ -17,7 +18,7 @@ const client = new Client({
 });
 
 // Simple Event Registration
-const events = [ready, messageReactionAdd, interactionCreate];
+const events = [ready, messageReactionAdd, interactionCreate, messageCreate];
 
 console.log(`📂 Registering ${events.length} event handlers...`);
 

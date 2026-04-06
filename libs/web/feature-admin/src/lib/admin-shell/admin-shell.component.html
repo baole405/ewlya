@@ -1,0 +1,84 @@
+<div class="drawer lg:drawer-open h-full bg-base-300">
+  <input id="admin-drawer" type="checkbox" class="drawer-toggle" />
+
+  <div class="drawer-content flex flex-col min-h-screen">
+    <!-- Navbar for Mobile -->
+    <div class="w-full navbar bg-base-100 lg:hidden shadow-sm">
+      <div class="flex-none">
+        <label for="admin-drawer" class="btn btn-square btn-ghost">
+          <lucide-angular [name]="Menu" class="w-6 h-6"></lucide-angular>
+        </label>
+      </div>
+      <div class="flex-1 px-2 mx-2 font-bold text-xl">DarkStar Admin</div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="p-6 md:p-8 flex-1 overflow-auto">
+      <router-outlet></router-outlet>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-4 bg-base-100 text-base-content border-t border-base-200">
+      <aside>
+        <p>© 2026 DarkStar Clan Engineering - Premium Dashboard</p>
+      </aside>
+    </footer>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="drawer-side z-30 shadow-xl">
+    <label for="admin-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
+    <div class="menu p-4 w-72 min-h-full bg-base-100 text-base-content flex flex-col gap-4">
+      <!-- Sidebar Header -->
+      <div class="flex items-center gap-3 px-4 py-6">
+        <div
+          class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-primary-content shadow-lg shadow-primary/20"
+        >
+          <lucide-angular [name]="LayoutDashboard" class="w-6 h-6"></lucide-angular>
+        </div>
+        <div>
+          <h1 class="text-xl font-black tracking-tight leading-none">DARKSTAR</h1>
+          <span class="text-[10px] font-bold tracking-[0.2em] text-primary uppercase"
+            >Control Center</span
+          >
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <ul class="space-y-1">
+        <li *ngFor="let item of menuItems">
+          <a
+            [routerLink]="item.link"
+            [routerLinkActive]="['bg-primary/10', 'text-primary', 'font-bold']"
+            [routerLinkActiveOptions]="{ exact: item.exact || false }"
+            class="flex items-center gap-3 py-3 px-4 rounded-xl hover:bg-base-200 transition-all group"
+          >
+            <lucide-angular
+              [name]="item.icon"
+              class="w-5 h-5 group-hover:scale-110 transition-transform"
+            ></lucide-angular>
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="mt-auto pt-4 border-t border-base-200">
+        <a
+          routerLink="/"
+          class="flex items-center gap-3 py-3 px-4 rounded-xl bg-error/10 text-error hover:bg-error/20 transition-all group mb-4"
+        >
+          <lucide-angular
+            [name]="LogOut"
+            class="w-5 h-5 group-hover:rotate-12 transition-transform"
+          ></lucide-angular>
+          <span>Trang chủ</span>
+        </a>
+
+        <div class="flex items-center gap-3 px-4 py-2 opacity-50 text-xs italic">
+          <span class="w-2 h-2 rounded-full bg-success"></span>
+          Connected to darkstar-db
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

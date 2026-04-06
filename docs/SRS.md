@@ -38,15 +38,13 @@ Tài liệu này định nghĩa **TOÀN BỘ** yêu cầu chức năng và phi c
 
 | Module               | Mô tả                                          |
 | :------------------- | :---------------------------------------------- |
-| Website (Frontend)   | Trang chủ, Bảng xếp hạng Hall of Flame         |
-| API Server (Backend) | RESTful API CRUD Members, Submissions, Seasons  |
-| Discord Bot          | Các lệnh slash: register, points, leaderboard   |
+| Website (Frontend)   | Trang chủ, Hall of Flame, **Admin Dashboard**  |
+| API Server (Backend) | CRUD Members, Submissions, Seasons, **Auth SSO**|
+| Discord Bot          | register, points, leaderboard, **submit**       |
 | Database             | PostgreSQL Cloud (Supabase) qua Prisma ORM      |
 
 #### Out-of-Scope (Phase 1)
 
-- ❌ OAuth login / Discord SSO trên Website
-- ❌ Admin Dashboard (web-based)
 - ❌ Multi-clan / multi-game support
 - ❌ Real-time WebSocket notifications
 - ❌ Payment / donation integration
@@ -62,7 +60,6 @@ Tài liệu này định nghĩa **TOÀN BỘ** yêu cầu chức năng và phi c
 | **IGN**        | In-Game Name — Tên nhân vật trong game                     |
 | **GS Code**    | GunShip Code — Mã định danh người chơi trong game          |
 | **Points**     | Điểm tích lũy, được cộng dồn qua các submission           |
-| **Moderator**  | Người có quyền duyệt submission và ghi điểm               |
 
 ### 1.5 References
 
@@ -115,7 +112,6 @@ Tài liệu này định nghĩa **TOÀN BỘ** yêu cầu chức năng và phi c
 | :-------------- | :---------------------- | :---------------------- | :---------------------- |
 | **Visitor**     | Xem trang chủ, HoF     | `GET` endpoints only    | N/A                     |
 | **Member**      | Xem profile cá nhân    | `GET` endpoints only    | `/points`, `/leaderboard` |
-| **Moderator**   | Xem tất cả             | `GET` + `POST` submit  | `/submit`, `/verify`    |
 | **Admin**       | Full access             | Full CRUD               | All commands + `/season` |
 
 ### 2.3 Tech Stack
@@ -228,19 +224,39 @@ And filtering happens in real-time (no page reload)
 | **Module**       | `libs/web/feature-member-profile` (planned)              |
 
 **Description:**
-When a visitor navigates to "/members/:id", the system shall display:
-1. Member profile card (avatar, nickname, IGN, GS Code, total points).
-2. Submission history table (mission, points earned, date, verified by).
-3. Points trend chart across seasons.
+---
 
-**Acceptance Criteria:**
-```gherkin
-Given I am on "/members/abc123"
-When the page loads
-Then I see the member's profile with avatar, nickname, and total points
-And I see a table of their submission history
-And I see a line chart showing points earned per season
-```
+### FR-005: Discord SSO & Auth
+
+| Field            | Value                                                    |
+| :--------------- | :------------------------------------------------------- |
+| **ID**           | FR-005                                                   |
+| **Priority**     | 🔴 Must Have                                            |
+| **Status**       | 🟡 In Progress                                         |
+| **Module**       | `libs/api/auth`, `libs/web/data-access`                  |
+
+**Description:**
+When a user clicks "Login with Discord", the system shall:
+1. Redirect to Discord OAuth2.
+2. Create/Update member in DB.
+3. Issue a JWT for session management.
+
+---
+
+### FR-006: Admin Dashboard (CRUD)
+
+| Field            | Value                                                    |
+| :--------------- | :------------------------------------------------------- |
+| **ID**           | FR-006                                                   |
+| **Priority**     | 🔴 Must Have                                            |
+| **Status**       | ⬜ Not Started                                          |
+| **Module**       | `libs/web/feature-admin`                                 |
+
+**Description:**
+When an Admin is logged in, the system shall provide a dashboard to:
+1. **CRUD Members**: Edit nickname, points, role.
+2. **CRUD Seasons**: Manage competition periods.
+3. **Approve Submissions**: Verify clan missions and awards.
 
 ---
 
@@ -412,10 +428,10 @@ The website shall render correctly on:
 | **ID**           | FR-020                                                   |
 | **Priority**     | 🔴 Must Have                                            |
 | **Status**       | ⬜ Not Started                                          |
-| **Auth**         | 🔒 Bearer Token (Moderator / Admin / Bot)              |
+| **Auth**         | 🔒 Bearer Token (Admin / Bot)                          |
 
 **Description:**
-When a moderator submits a score, the system shall:
+When an admin submits a score, the system shall:
 1. Create a new Submission record.
 2. Add the submission's points to the member's total points.
 3. Return the updated member with new total.
@@ -434,7 +450,7 @@ When a moderator submits a score, the system shall:
 **Acceptance Criteria:**
 ```gherkin
 Given a member has 2400 points
-When a moderator submits 100 points for that member
+When an admin submits 100 points for that member
 Then the Submission is created with points=100
 And the member's total points becomes 2500
 And the response includes the updated member
@@ -517,7 +533,7 @@ When any user types `/leaderboard`, the bot shall display the top 10 members in 
 
 ---
 
-### FR-053: /submit (Mod Only)
+### FR-053: /submit (Admin Only)
 
 | Field            | Value                                                    |
 | :--------------- | :------------------------------------------------------- |
@@ -526,7 +542,7 @@ When any user types `/leaderboard`, the bot shall display the top 10 members in 
 | **Status**       | ⬜ Not Started                                          |
 
 **Description:**
-When a moderator types `/submit @user <mission> <rank> <points>`, the bot shall:
+When an admin types `/submit @user <mission> <rank> <points>`, the bot shall:
 1. Call `POST /api/submissions`.
 2. Reply with confirmation embed.
 3. Log the submission to the `CONTRIBUTE_LOGS` channel.
