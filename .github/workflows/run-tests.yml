@@ -10,6 +10,7 @@ jobs:
     name: 🧪 Jest Affected Tests
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       pull-requests: read
     steps:
