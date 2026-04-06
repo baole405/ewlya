@@ -1,4 +1,5 @@
 import nx from '@nx/eslint-plugin';
+import angularEslint from 'angular-eslint';
 
 export default [
   ...nx.configs['flat/base'],
@@ -38,5 +39,29 @@ export default [
     ],
     // Override or add rules here
     rules: {},
+  },
+  {
+    files: ['apps/ds-website/**/*.ts', 'libs/web/**/*.ts'],
+    plugins: {
+      '@angular-eslint': angularEslint.tsPlugin,
+    },
+    rules: {
+      '@angular-eslint/directive-selector': [
+        'error',
+        {
+          type: 'attribute',
+          prefix: 'ds',
+          style: 'camelCase',
+        },
+      ],
+      '@angular-eslint/component-selector': [
+        'error',
+        {
+          type: 'element',
+          prefix: ['ds'],
+          style: 'kebab-case',
+        },
+      ],
+    },
   },
 ];

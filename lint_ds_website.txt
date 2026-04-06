@@ -1,0 +1,41 @@
+
+[2m> [22m[2mnx run[22m ds-website:lint --no-cache
+
+[2m> [22meslint . --no-cache
+
+[0m[0m
+[0m[4mC:\Users\thinkbook\Documents\code\discord\ewlya\apps\ds-website\jest.config.ts[24m[0m
+[0m  [2m1:1[22m  [33mwarning[39m  Unused eslint-disable directive (no problems were reported)[0m
+[0m[0m
+[0m[4mC:\Users\thinkbook\Documents\code\discord\ewlya\apps\ds-website\src\app\admin\dashboard.component.ts[24m[0m
+[0m   [2m28:63[22m  [31merror[39m  Use built-in control flow instead of directive ngIf     [2m@angular-eslint/template/prefer-control-flow[22m[0m
+[0m   [2m77:38[22m  [31merror[39m  Use built-in control flow instead of directive ngForOf  [2m@angular-eslint/template/prefer-control-flow[22m[0m
+[0m  [2m117:15[22m  [31merror[39m  Use built-in control flow instead of directive ngIf     [2m@angular-eslint/template/prefer-control-flow[22m[0m
+[0m[0m
+[0m[4mC:\Users\thinkbook\Documents\code\discord\ewlya\apps\ds-website\src\app\app.html[24m[0m
+[0m  [2m23:3[22m  [31merror[39m  click must be accompanied by either keyup, keydown or keypress event for accessibility  [2m@angular-eslint/template/click-events-have-key-events[22m[0m
+[0m  [2m23:3[22m  [31merror[39m  Elements with interaction handlers must be focusable                                    [2m@angular-eslint/template/interactive-supports-focus[22m[0m
+[0m[0m
+[0m[4mC:\Users\thinkbook\Documents\code\discord\ewlya\apps\ds-website\src\app\shared\ui\hlm-button.component.ts[24m[0m
+[0m  [2m5:13[22m  [31merror[39m  The selector should start with one of these prefixes: "ds" (https://angular.dev/style-guide#choosing-component-selectors)  [2m@angular-eslint/component-selector[22m[0m
+[0m[0m
+[0m[4mC:\Users\thinkbook\Documents\code\discord\ewlya\apps\ds-website\src\app\shared\ui\hlm-card.component.ts[24m[0m
+[0m   [2m5:13[22m  [31merror[39m  The selector should start with one of these prefixes: "ds" (https://angular.dev/style-guide#choosing-component-selectors)  [2m@angular-eslint/component-selector[22m[0m
+[0m  [2m23:13[22m  [31merror[39m  The selector should start with one of these prefixes: "ds" (https://angular.dev/style-guide#choosing-component-selectors)  [2m@angular-eslint/component-selector[22m[0m
+[0m  [2m31:13[22m  [31merror[39m  The selector should start with one of these prefixes: "ds" (https://angular.dev/style-guide#choosing-component-selectors)  [2m@angular-eslint/component-selector[22m[0m
+[0m  [2m41:13[22m  [31merror[39m  The selector should start with one of these prefixes: "ds" (https://angular.dev/style-guide#choosing-component-selectors)  [2m@angular-eslint/component-selector[22m[0m
+[0m[0m
+[0m[31m[1mΓ£û 11 problems (10 errors, 1 warning)[22m[39m[0m
+[0m[31m[1m[22m[39m[31m[1m  0 errors and 1 warning potentially fixable with the `--fix` option.[22m[39m[0m
+[0m[31m[1m[22m[39m[0m
+
+[2m[31m[39m[22m
+
+[7m[1m[31m NX [39m[22m[27m  [31mRunning target [1mlint[22m for project ds-website failed[39m
+
+[2mFailed tasks:[22m
+
+[2m-[22m ds-website:lint
+
+[2mHint: run the command with[22m --verbose [2mfor more details.[22m
+

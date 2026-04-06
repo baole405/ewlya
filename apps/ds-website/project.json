@@ -2,7 +2,7 @@
   "name": "ds-website",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "prefix": "app",
+  "prefix": "ds",
   "sourceRoot": "apps/ds-website/src",
   "tags": [],
   "targets": {
