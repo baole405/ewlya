@@ -21,18 +21,20 @@ jobs:
           # Start Ephemeral Env
           docker compose -f docker-compose.test.yml up -d --build
           
-          # Wait for Healthcheck
-          echo "Waiting for API Healthcheck/Startup..."
-          # Since we use depends_on: service_healthy, docker compose up -d 
-          # will wait for DB to be ready, but we still need wait for API itself.
-          sleep 20
-          
-          # Show running containers for debug
-          docker ps
-          
           # Dynamic detect container name
           CONTAINER_NAME=$(docker ps --filter "ancestor=darkstar-api:stress" --format "{{.Names}}")
           echo "Detected container: $CONTAINER_NAME"
+
+          # Sync Database Schema
+          echo "Syncing Prisma Schema to Ephemeral DB..."
+          docker exec $CONTAINER_NAME npx prisma db push --schema=libs/shared/db/prisma/schema.prisma --skip-generate
+          
+          # Wait for API to settle after sync
+          echo "Waiting for API startup..."
+          sleep 15
+          
+          # Show running containers for debug
+          docker ps
           
           # Check Status
           if [ -n "$CONTAINER_NAME" ] && docker inspect "$CONTAINER_NAME" | grep -q '"Status": "healthy"'; then

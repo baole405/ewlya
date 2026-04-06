@@ -19,6 +19,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./libs/shared/db/prisma:/app/libs/shared/db/prisma
     ports:
       - "3000:3000"
     environment:
