@@ -26,6 +26,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://user:pass@db:5432/db?sslmode=disable
+      - DIRECT_URL=postgresql://user:pass@db:5432/db?sslmode=disable
       - JWT_SECRET=smoke-test-secret
       - DISCORD_CLIENT_ID=mock
       - DISCORD_CLIENT_SECRET=mock
