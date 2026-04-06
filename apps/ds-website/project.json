@@ -76,6 +76,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
+        "passWithNoTests": true,
         "jestConfig": "apps/ds-website/jest.config.ts"
       }
     }

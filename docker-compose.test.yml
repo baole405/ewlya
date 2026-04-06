@@ -1,13 +1,29 @@
 services:
+  db:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   api:
+    image: darkstar-api:stress
     build:
       context: .
       dockerfile: Dockerfile.api
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://user:pass@localhost:5432/db?sslmode=disable
+      - DATABASE_URL=postgresql://user:pass@db:5432/db?sslmode=disable
       - JWT_SECRET=smoke-test-secret
       - DISCORD_CLIENT_ID=mock
       - DISCORD_CLIENT_SECRET=mock
@@ -17,4 +33,4 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s

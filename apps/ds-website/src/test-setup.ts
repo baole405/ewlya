@@ -1,3 +1,2 @@
-import { setupZoneTestRunner } from 'jest-preset-angular/setup-jest';
-
-setupZoneTestRunner();
+import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+setupZoneTestEnv();

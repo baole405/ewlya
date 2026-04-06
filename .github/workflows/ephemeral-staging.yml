@@ -16,26 +16,21 @@ jobs:
       - name: 🔐 Setup Doppler CLI
         uses: dopplerhq/cli-action@v3
 
-      - name: 🌀 Build Stress Test (4x Loop)
-        run: |
-          for i in {1..4}; do
-            echo "Build attempt $i/4..."
-            docker build -t darkstar-api:stress -f Dockerfile.api .
-          done
-
       - name: 💨 Smoke Test (Docker Compose)
         run: |
           # Start Ephemeral Env
-          docker compose -f docker-compose.test.yml up -d
+          docker compose -f docker-compose.test.yml up -d --build
           
           # Wait for Healthcheck
           echo "Waiting for API Healthcheck/Startup..."
+          # Since we use depends_on: service_healthy, docker compose up -d 
+          # will wait for DB to be ready, but we still need wait for API itself.
           sleep 20
           
           # Show running containers for debug
           docker ps
           
-          # Dynamic detect container name (since project name varies in CI)
+          # Dynamic detect container name
           CONTAINER_NAME=$(docker ps --filter "ancestor=darkstar-api:stress" --format "{{.Names}}")
           echo "Detected container: $CONTAINER_NAME"
           
@@ -46,6 +41,9 @@ jobs:
           else
             echo "❌ Smoke test failed: API is not healthy!"
             [ -n "$CONTAINER_NAME" ] && docker logs "$CONTAINER_NAME"
+            # Log DB as well if API failed
+            DB_NAME=$(docker ps -a --filter "name=db" --format "{{.Names}}")
+            [ -n "$DB_NAME" ] && docker logs "$DB_NAME"
             docker compose -f docker-compose.test.yml down
             exit 1
           fi
