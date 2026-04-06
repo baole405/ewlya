@@ -12,7 +12,7 @@ export default [
         'error',
         {
           type: 'attribute',
-          prefix: 'ds',
+          prefix: ['ds', 'hlm'],
           style: 'camelCase',
         },
       ],
@@ -20,15 +20,19 @@ export default [
         'error',
         {
           type: 'element',
-          prefix: 'ds',
+          prefix: ['ds', 'hlm'],
           style: 'kebab-case',
         },
       ],
+      '@angular-eslint/template/prefer-control-flow': 'off',
     },
   },
   {
     files: ['**/*.html'],
-    // Override or add rules here
-    rules: {},
+    rules: {
+      '@angular-eslint/template/prefer-control-flow': 'off',
+      '@angular-eslint/template/click-events-have-key-events': 'off',
+      '@angular-eslint/template/interactive-supports-focus': 'off',
+    },
   },
 ];

@@ -1,8 +1,8 @@
- 
 export default {
   displayName: 'ds-website',
   preset: '../../jest.preset.js',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
+  passWithNoTests: true,
   coverageDirectory: '../../coverage/apps/ds-website',
   transform: {
     '^.+\\.(ts|mjs|js|html)$': [

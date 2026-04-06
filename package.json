@@ -98,11 +98,15 @@
     "esbuild": "^0.19.2",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
+    "husky": "^9.1.5",
     "jest": "^30.0.2",
+    "jest-environment-jsdom": "^30.3.0",
     "jest-environment-node": "^30.0.2",
+    "jest-preset-angular": "^16.1.2",
     "jest-util": "^30.0.2",
     "jsdom": "^28.0.0",
     "jsonc-eslint-parser": "^2.1.0",
+    "lint-staged": "^15.2.10",
     "lucide-angular": "^0.577.0",
     "nx": "22.5.4",
     "postcss": "^8.5.3",
@@ -115,8 +119,6 @@
     "typescript-eslint": "^8.40.0",
     "vite": "^7.0.0",
     "vitest": "^4.0.8",
-    "webpack-cli": "^5.1.4",
-    "husky": "^9.1.5",
-    "lint-staged": "^15.2.10"
+    "webpack-cli": "^5.1.4"
   }
 }

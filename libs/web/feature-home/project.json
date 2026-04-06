@@ -10,6 +10,7 @@
       "executor": "@nx/vitest:test",
       "outputs": ["{options.reportsDirectory}"],
       "options": {
+        "passWithNoTests": true,
         "reportsDirectory": "../../../coverage/libs/web/feature-home"
       }
     },
