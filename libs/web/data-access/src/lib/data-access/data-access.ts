@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'lib-data-access',
+  selector: 'ds-data-access',
   imports: [],
   templateUrl: './data-access.html',
   styleUrl: './data-access.css',

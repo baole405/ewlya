@@ -1,0 +1,48 @@
+services:
+  postgres-prod:
+    image: postgres:16-alpine
+    container_name: darkstar-postgres-prod
+    environment:
+      POSTGRES_USER: ds_user
+      POSTGRES_PASSWORD: ds_password
+      POSTGRES_DB: darkstar_db
+    ports:
+      - "5488:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - darkstar-net
+
+  api-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: darkstar-api-prod
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    restart: always
+    networks:
+      - darkstar-net
+
+  bot-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: darkstar-bot-prod
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    restart: always
+    networks:
+      - darkstar-net
+
+networks:
+  darkstar-net:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:

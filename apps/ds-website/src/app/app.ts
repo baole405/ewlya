@@ -4,7 +4,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService, DISCORD_LOGIN_URL } from '@ds/web/data-access';
 
 @Component({
-  selector: 'app-root',
+  selector: 'ds-root',
   imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './app.html',
   styleUrl: './app.css',

@@ -1,22 +1,33 @@
-name: 🔄 Local Docker Sync
+name: 🚀 Local Production Sync
 
 on:
-  workflow_run:
-    workflows: ["🧪 Run Unit Tests"]
-    types: [completed]
-    branches: [main]
+  push:
+    branches:
+      - main
 
 jobs:
-  deploy-local:
-    name: 🚀 Sync Local Docker
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  local-deploy:
+    name: 🔄 Sync & Rebuild Local
     runs-on: self-hosted
-    steps:
-      - name: 🔐 Setup Local Env
-        run: echo "🚀 Preparing local deployment..."
+    # Chỉ chạy trên máy DARKSTAR-DATA-PC để tránh xung đột với các runner khác (nếu có)
+    if: github.repository == 'baole405/Ewlya'
 
-      - name: 🌀 Docker Pull & Restart (Local)
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Setup Doppler
         run: |
-          docker-compose -f docker-compose.prod.yml pull
-          docker-compose -f docker-compose.prod.yml up -d
-          echo "✅ Local Environment Synced!"
+          # Kiểm tra xem Doppler CLI đã được cài đặt chưa
+          doppler --version || echo "Doppler CLI is missing. Please install it on Windows."
+
+      - name: 📦 Prisma Client Generate
+        run: npx prisma generate --schema=libs/shared/db/prisma/schema.prisma
+
+      - name: 🏗️ Rebuild & Deploy Docker
+        run: |
+          # Dùng doppler run để nạp toàn bộ biến môi trường vào quá trình build/up
+          doppler run -- docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+
+      - name: 🧹 Cleanup Images
+        run: docker image prune -f
