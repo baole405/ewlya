@@ -24,7 +24,7 @@ export class MemberService {
   async loadMembers() {
     this._loading.set(true);
     try {
-      const data = await firstValueFrom(this.http.get<Member[]>(this.apiUrl));
+      const data = await firstValueFrom(this.http.get<Member[]>(`${this.apiUrl}/members`));
       this._members.set(data);
     } catch (error) {
       console.error('Failed to load members', error);
@@ -37,8 +37,10 @@ export class MemberService {
    * Cập nhật thông tin thành viên (Thay thế Google Sheets)
    */
   async updateMember(id: string, data: Partial<Member>) {
-    const updated = await firstValueFrom(this.http.patch<Member>(`${this.apiUrl}/${id}`, data));
-    this._members.update(ms => ms.map(m => m.id === id ? updated : m));
+    const updated = await firstValueFrom(
+      this.http.patch<Member>(`${this.apiUrl}/members/${id}`, data),
+    );
+    this._members.update((ms) => ms.map((m) => (m.id === id ? updated : m)));
     return updated;
   }
 
@@ -46,8 +48,10 @@ export class MemberService {
    * Cập nhật điểm có kèm lý do (Audit Log)
    */
   async updatePoints(id: string, payload: { points: number; reason: string }) {
-    const updated = await firstValueFrom(this.http.patch<Member>(`${this.apiUrl}/${id}/points`, payload));
-    this._members.update(ms => ms.map(m => m.id === id ? updated : m));
+    const updated = await firstValueFrom(
+      this.http.patch<Member>(`${this.apiUrl}/members/${id}/points`, payload),
+    );
+    this._members.update((ms) => ms.map((m) => (m.id === id ? updated : m)));
     return updated;
   }
 
@@ -55,8 +59,8 @@ export class MemberService {
    * Thêm thành viên mới
    */
   async createMember(data: Partial<Member>) {
-    const created = await firstValueFrom(this.http.post<Member>(this.apiUrl, data));
-    this._members.update(ms => [...ms, created]);
+    const created = await firstValueFrom(this.http.post<Member>(`${this.apiUrl}/members`, data));
+    this._members.update((ms) => [...ms, created]);
     return created;
   }
 

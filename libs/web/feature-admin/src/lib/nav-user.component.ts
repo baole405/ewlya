@@ -34,8 +34,8 @@ export interface UserInfo {
     }),
   ],
   template: `
-    <hlm-sidebar-menu>
-      <hlm-sidebar-menu-item>
+    <ul hlmSidebarMenu>
+      <li hlmSidebarMenuItem>
         <!-- Trigger button -->
         <button
           [hlmDropdownMenuTrigger]="profileMenu"
@@ -114,8 +114,8 @@ export interface UserInfo {
             </button>
           </div>
         </ng-template>
-      </hlm-sidebar-menu-item>
-    </hlm-sidebar-menu>
+      </li>
+    </ul>
   `,
 })
 export class NavUserComponent {

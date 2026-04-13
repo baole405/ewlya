@@ -92,6 +92,146 @@ async function main() {
     }
   }
 
+  // --- Process Former Members (Archived) ---
+  console.log('📦 Processing former members...');
+  const formerMembers = [
+    {
+      nickname: 'White Hero',
+      ign: 'ヒーロー',
+      discordId: null,
+      gender: 'M',
+      age: '22',
+      birthdate: '22/8/2001',
+      country: 'Spain',
+    },
+    {
+      nickname: 'batter',
+      ign: 'Nel batter.',
+      discordId: null,
+      gender: 'F',
+      age: '23',
+      birthdate: null,
+      country: 'Japan',
+    },
+    {
+      nickname: 'Lust',
+      ign: 'ki_rito',
+      discordId: null,
+      gsCode: '122523925',
+      gender: 'M',
+      age: null,
+      birthdate: null,
+      country: 'France',
+    },
+    {
+      nickname: 'Miyubi',
+      ign: 'Miyubi',
+      discordId: '277609281304395788',
+      gender: 'M',
+      age: null,
+      birthdate: '9/2/2004',
+      country: 'USA',
+    },
+    {
+      nickname: 'Sora',
+      ign: 'SorA devilsora0512',
+      discordId: null,
+      gender: 'M',
+      age: '24',
+      birthdate: '5/12/2000',
+      country: 'Vietnam',
+    },
+    {
+      nickname: 'Mangagirl',
+      ign: 'H16',
+      discordId: '198578775280189440',
+      gsCode: '151988668',
+      gender: 'M',
+      age: '22',
+      birthdate: null,
+      country: 'USA',
+    },
+    {
+      nickname: 'Filo',
+      ign: 'FL FILO',
+      discordId: '591972758443917317',
+      gender: 'M',
+      age: '24',
+      birthdate: '14/04/2004',
+      country: 'Vietnam',
+    },
+    {
+      nickname: 'Astolfo',
+      ign: 'CesSimp',
+      discordId: '636901503579193346',
+      gender: 'M',
+      age: '19',
+      birthdate: '31/01/2005',
+      country: 'Vietnam',
+    },
+    {
+      nickname: 'Jviper',
+      ign: 'Jviper',
+      discordId: null,
+      gender: null,
+      age: null,
+      birthdate: null,
+      country: null,
+    },
+    {
+      nickname: 'Forte???',
+      ign: 'Forte??? my_lil_forte Fortesimp',
+      discordId: null,
+      gender: null,
+      age: null,
+      birthdate: null,
+      country: null,
+    },
+    {
+      nickname: 'Haoleaves',
+      ign: 'Haoleaves',
+      discordId: '482063999710527488',
+      gsCode: '722069910',
+      gender: 'M',
+      age: null,
+      birthdate: null,
+      country: 'Vietnam',
+    },
+  ];
+
+  for (const m of formerMembers) {
+    try {
+      console.log(`👤 Upserting (Archived): ${m.nickname}`);
+      await prisma.member.upsert({
+        where: { nickname: m.nickname },
+        update: {
+          ign: m.ign,
+          discordId: m.discordId,
+          gsCode: m.gsCode || null,
+          gender: m.gender,
+          age: m.age,
+          birthdate: m.birthdate,
+          country: m.country,
+          status: 'FORMER',
+        },
+        create: {
+          nickname: m.nickname,
+          ign: m.ign,
+          discordId: m.discordId,
+          gsCode: m.gsCode || null,
+          gender: m.gender,
+          age: m.age,
+          birthdate: m.birthdate,
+          country: m.country,
+          role: Role.MEMBER,
+          status: 'FORMER',
+        },
+      });
+    } catch (error) {
+      console.error('❌ Error processing former member:', m.nickname, error);
+    }
+  }
+
   console.log('✅ Seeding completed!');
 }
 
