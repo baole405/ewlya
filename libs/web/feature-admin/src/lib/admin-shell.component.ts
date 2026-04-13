@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
   lucideUsers,
@@ -20,6 +21,7 @@ import { NavUserComponent } from './nav-user.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterOutlet,
+    TranslateModule,
     NgIconComponent,
     ...HlmSidebarImports,
     ...HlmBreadCrumbImports,
@@ -51,7 +53,9 @@ import { NavUserComponent } from './nav-user.component';
                 >
                   <ng-icon name="lucideBoxes" class="size-4" />
                 </div>
-                <div class="grid flex-1 text-left text-sm leading-tight">
+                <div
+                  class="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden"
+                >
                   <span class="truncate font-semibold">DarkStar</span>
                   <span class="truncate text-xs text-sidebar-foreground/60">Admin Panel</span>
                 </div>
@@ -66,18 +70,22 @@ import { NavUserComponent } from './nav-user.component';
 
           <!-- Support / Secondary nav at bottom -->
           <div hlmSidebarGroup class="mt-auto">
-            <span hlmSidebarGroupLabel>Support</span>
+            <div hlmSidebarGroupLabel>{{ 'SIDEBAR.SUPPORT' | translate }}</div>
             <ul hlmSidebarMenu>
               <li hlmSidebarMenuItem>
-                <a hlmSidebarMenuButton tooltip="Support" href="mailto:support@darkstar.gg">
+                <a
+                  hlmSidebarMenuButton
+                  tooltip="{{ 'SIDEBAR.SUPPORT' | translate }}"
+                  href="mailto:support@darkstar.gg"
+                >
                   <ng-icon name="lucideLifeBuoy" />
-                  <span>Support</span>
+                  <span>{{ 'SIDEBAR.SUPPORT' | translate }}</span>
                 </a>
               </li>
               <li hlmSidebarMenuItem>
-                <a hlmSidebarMenuButton tooltip="Feedback" href="#">
+                <a hlmSidebarMenuButton tooltip="{{ 'SIDEBAR.FEEDBACK' | translate }}" href="#">
                   <ng-icon name="lucideSend" />
-                  <span>Feedback</span>
+                  <span>{{ 'SIDEBAR.FEEDBACK' | translate }}</span>
                 </a>
               </li>
             </ul>
@@ -123,18 +131,18 @@ import { NavUserComponent } from './nav-user.component';
 export class AdminShellComponent {
   navMain: NavItem[] = [
     {
-      title: 'Dashboard',
+      title: 'SIDEBAR.DASHBOARD',
       url: '/admin',
       icon: 'lucideLayoutDashboard',
     },
     {
-      title: 'Quản lý Thành viên',
+      title: 'SIDEBAR.MEMBERS',
       url: '/admin/members',
       icon: 'lucideUsers',
       isActive: true,
     },
     {
-      title: 'Settings',
+      title: 'SIDEBAR.SETTINGS',
       url: '/admin/settings',
       icon: 'lucideSettings',
     },

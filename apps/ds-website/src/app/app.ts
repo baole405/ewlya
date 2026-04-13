@@ -3,6 +3,7 @@ import { Component, signal, inject, OnInit, DestroyRef } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
 import { AuthService, DISCORD_LOGIN_URL } from '@ds/web/data-access';
 
 @Component({
@@ -19,12 +20,17 @@ export class App implements OnInit {
   discordLoginUrl = inject(DISCORD_LOGIN_URL);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private translate = inject(TranslateService);
 
   title = 'ds-website';
   sidebarOpen = signal(false);
   isAdminPage = signal(false);
 
   ngOnInit() {
+    // Set initial language
+    const savedLang = localStorage.getItem('ds_lang') || 'vi';
+    this.translate.use(savedLang);
+
     // Set initial state on load
     this.isAdminPage.set(this.router.url.startsWith('/admin'));
 

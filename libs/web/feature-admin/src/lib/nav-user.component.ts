@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import {
   lucideBadgeCheck,
@@ -7,7 +8,7 @@ import {
   lucideBell,
   lucideLogOut,
   lucideChevronsUpDown,
-  lucideSparkles,
+  lucideSettings,
 } from '@ng-icons/lucide';
 import { HlmAvatarImports } from '@spartan-ng/helm/avatar';
 import { HlmDropdownMenuImports } from '@spartan-ng/helm/dropdown-menu';
@@ -22,7 +23,14 @@ export interface UserInfo {
 @Component({
   selector: 'ds-nav-user',
   standalone: true,
-  imports: [NgIconComponent, ...HlmAvatarImports, ...HlmDropdownMenuImports, ...HlmSidebarImports],
+  imports: [
+    RouterLink,
+    TranslateModule,
+    NgIconComponent,
+    ...HlmAvatarImports,
+    ...HlmDropdownMenuImports,
+    ...HlmSidebarImports,
+  ],
   providers: [
     provideIcons({
       lucideBadgeCheck,
@@ -30,7 +38,7 @@ export interface UserInfo {
       lucideBell,
       lucideLogOut,
       lucideChevronsUpDown,
-      lucideSparkles,
+      lucideSettings,
     }),
   ],
   template: `
@@ -55,11 +63,16 @@ export interface UserInfo {
               {{ initials() }}
             </span>
           </hlm-avatar>
-          <div class="grid flex-1 text-left text-sm leading-tight">
+          <div
+            class="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden"
+          >
             <span class="truncate font-semibold">{{ user.username }}</span>
             <span class="truncate text-xs text-muted-foreground">{{ user.role }}</span>
           </div>
-          <ng-icon name="lucideChevronsUpDown" class="ml-auto size-4" />
+          <ng-icon
+            name="lucideChevronsUpDown"
+            class="ml-auto size-4 group-data-[collapsible=icon]:hidden"
+          />
         </button>
 
         <!-- Dropdown menu -->
@@ -84,25 +97,16 @@ export interface UserInfo {
 
             <div hlmDropdownMenuGroup>
               <button hlmDropdownMenuItem class="w-full text-left">
-                <ng-icon name="lucideSparkles" class="mr-2 size-4 text-yellow-500" />
-                Upgrade to Pro
-              </button>
-            </div>
-
-            <div hlmDropdownMenuSeparator></div>
-
-            <div hlmDropdownMenuGroup>
-              <button hlmDropdownMenuItem class="w-full text-left">
                 <ng-icon name="lucideBadgeCheck" class="mr-2 size-4" />
-                Account
+                {{ 'SIDEBAR.ACCOUNT' | translate }}
               </button>
-              <button hlmDropdownMenuItem class="w-full text-left">
-                <ng-icon name="lucideCreditCard" class="mr-2 size-4" />
-                Billing
-              </button>
+              <a hlmDropdownMenuItem routerLink="/admin/settings" class="w-full text-left block">
+                <ng-icon name="lucideSettings" class="mr-2 size-4" />
+                {{ 'SIDEBAR.SETTINGS' | translate }}
+              </a>
               <button hlmDropdownMenuItem class="w-full text-left">
                 <ng-icon name="lucideBell" class="mr-2 size-4" />
-                Notifications
+                {{ 'SIDEBAR.NOTIFICATIONS' | translate }}
               </button>
             </div>
 
@@ -110,7 +114,7 @@ export interface UserInfo {
 
             <button hlmDropdownMenuItem (click)="logout()" class="w-full text-left">
               <ng-icon name="lucideLogOut" class="mr-2 size-4" />
-              Log out
+              {{ 'SIDEBAR.LOGOUT' | translate }}
             </button>
           </div>
         </ng-template>

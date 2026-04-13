@@ -10,6 +10,10 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./members.page').then((m) => m.MembersPage),
       },
       {
+        path: 'settings',
+        loadComponent: () => import('./settings.page').then((m) => m.SettingsPage),
+      },
+      {
         path: '',
         redirectTo: 'members',
         pathMatch: 'full',

@@ -4,6 +4,7 @@ import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { lucideChevronRight } from '@ng-icons/lucide';
 import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
 import { HlmCollapsibleImports } from '@spartan-ng/helm/collapsible';
+import { TranslateModule } from '@ngx-translate/core';
 import { BrnCollapsibleImports } from '@spartan-ng/brain/collapsible';
 
 export interface NavItem {
@@ -20,6 +21,7 @@ export interface NavItem {
   imports: [
     RouterLink,
     RouterLinkActive,
+    TranslateModule,
     NgIconComponent,
     ...HlmSidebarImports,
     ...HlmCollapsibleImports,
@@ -28,7 +30,7 @@ export interface NavItem {
   providers: [provideIcons({ lucideChevronRight })],
   template: `
     <div hlmSidebarGroup>
-      <span hlmSidebarGroupLabel>Platform</span>
+      <div hlmSidebarGroupLabel>{{ 'SIDEBAR.PLATFORM' | translate }}</div>
       <ul hlmSidebarMenu>
         @for (item of items(); track item.title) {
           @if (item.items?.length) {
@@ -38,7 +40,7 @@ export interface NavItem {
                   @if (item.icon) {
                     <ng-icon [name]="item.icon" />
                   }
-                  <span>{{ item.title }}</span>
+                  <span>{{ item.title | translate }}</span>
                   <ng-icon
                     name="lucideChevronRight"
                     class="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
@@ -53,7 +55,7 @@ export interface NavItem {
                           [routerLink]="sub.url"
                           routerLinkActive="text-sidebar-accent-foreground font-medium"
                         >
-                          {{ sub.title }}
+                          {{ sub.title | translate }}
                         </a>
                       </li>
                     }
@@ -72,7 +74,7 @@ export interface NavItem {
                 @if (item.icon) {
                   <ng-icon [name]="item.icon" />
                 }
-                <span>{{ item.title }}</span>
+                <span>{{ item.title | translate }}</span>
               </a>
             </li>
           }

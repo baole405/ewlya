@@ -22,7 +22,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideTranslateService({
       loader: provideTranslateHttpLoader({
-        prefix: './assets/i18n/',
+        prefix: '/assets/i18n/',
         suffix: '.json',
       }),
       defaultLanguage: 'vi',

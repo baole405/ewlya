@@ -7,17 +7,29 @@
     "ACTIONS": "Actions"
   },
   "SIDEBAR": {
-    "NAVIGATION": "NAVIGATION",
-    "SYSTEM": "SYSTEM",
+    "PLATFORM": "Platform",
     "DASHBOARD": "Dashboard",
     "MEMBERS": "Members",
     "SEASONS": "Seasons",
     "ACCOUNT": "Account",
+    "SUPPORT": "Support",
+    "FEEDBACK": "Feedback",
+    "NOTIFICATIONS": "Notifications",
+    "SETTINGS": "Settings",
+    "LOGOUT": "Log out",
     "BACK_TO_HOME": "Back to Home"
   },
   "DASHBOARD": {
     "WELCOME": "Welcome back",
     "BREADCRUMB_ROOT": "DarkStar",
     "BREADCRUMB_ADMIN": "Admin"
+  },
+  "SETTINGS": {
+    "TITLE": "Settings",
+    "DESCRIPTION": "Manage your application settings.",
+    "LANGUAGE": "Language",
+    "LANGUAGE_DESCRIPTION": "Select your preferred language.",
+    "EN": "English",
+    "VI": "Tiếng Việt"
   }
 }

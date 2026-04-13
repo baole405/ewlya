@@ -7,17 +7,29 @@
     "ACTIONS": "Hành động"
   },
   "SIDEBAR": {
-    "NAVIGATION": "ĐIỀU HƯỚNG",
-    "SYSTEM": "HỆ THỐNG",
+    "PLATFORM": "Nền tảng",
     "DASHBOARD": "Bàn làm việc",
     "MEMBERS": "Thành viên",
     "SEASONS": "Mùa giải",
     "ACCOUNT": "Tài khoản",
+    "SUPPORT": "Hỗ trợ",
+    "FEEDBACK": "Góp ý",
+    "NOTIFICATIONS": "Thông báo",
+    "SETTINGS": "Cài đặt",
+    "LOGOUT": "Đăng xuất",
     "BACK_TO_HOME": "Quay lại trang chủ"
   },
   "DASHBOARD": {
     "WELCOME": "Chào mừng trở lại",
     "BREADCRUMB_ROOT": "DarkStar",
     "BREADCRUMB_ADMIN": "Admin"
+  },
+  "SETTINGS": {
+    "TITLE": "Cài đặt",
+    "DESCRIPTION": "Quản lý các cài đặt ứng dụng của bạn.",
+    "LANGUAGE": "Ngôn ngữ",
+    "LANGUAGE_DESCRIPTION": "Chọn ngôn ngữ ưu tiên của bạn.",
+    "EN": "Tiếng Anh",
+    "VI": "Tiếng Việt"
   }
 }
