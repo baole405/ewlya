@@ -354,7 +354,7 @@ export class LeaderboardComponent {
       (m: Member) =>
         m.nickname.toLowerCase().includes(term) ||
         m.ign.toLowerCase().includes(term) ||
-        m.gsCode.toLowerCase().includes(term),
+        (m.gsCode?.toLowerCase().includes(term) ?? false),
     );
   });
 

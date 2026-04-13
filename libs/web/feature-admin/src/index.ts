@@ -1,2 +1,3 @@
-export * from './lib/lib.routes';
-export * from './lib/admin-shell/admin-shell.component';
+export * from './lib/admin.routes';
+export * from './lib/admin-shell.component';
+export * from './lib/members.page';

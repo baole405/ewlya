@@ -2,21 +2,21 @@ export interface Member {
   id: string;
   nickname: string;
   ign: string;
-  discordId: string;
-  gsCode: string;
+  discordId: string | null;
+  gsCode: string | null;
   points: number;
-  rank: number;
-  avatarUrl?: string;
+  rank?: number;
+  avatarUrl?: string | null;
   role: 'ADMIN' | 'MEMBER';
 
-  // Domain fields from user
-  gender?: string;
-  birthdate?: Date;
-  age?: number;
-  country?: string;
-  aka?: string;
+  // Domain fields
+  gender?: string | null;
+  birthdate?: string | null;
+  age?: string | null;
+  country?: string | null;
+  aka?: string | null;
 
-  status: 'ACTIVE' | 'FORMER';
+  status: 'ACTIVE' | 'FORMER' | string;
   createdAt: Date;
   updatedAt: Date;
 }

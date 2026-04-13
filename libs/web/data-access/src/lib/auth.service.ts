@@ -12,7 +12,7 @@ export interface User {
 })
 export class AuthService {
   private platformId = inject(PLATFORM_ID);
-  
+
   // State management via Signals
   private _user = signal<User | null>(null);
   private _token = signal<string | null>(null);
@@ -32,7 +32,7 @@ export class AuthService {
     if (isPlatformBrowser(this.platformId)) {
       const token = localStorage.getItem('ds_token');
       const userJson = localStorage.getItem('ds_user');
-      
+
       if (token && userJson) {
         this._token.set(token);
         this._user.set(JSON.parse(userJson));
@@ -41,12 +41,20 @@ export class AuthService {
   }
 
   /**
+   * Chuyển hướng đến Auth Discord trên Backend
+   */
+  loginWithDiscord() {
+    const apiUrl = 'http://localhost:3000/api'; // TODO: Use Injection Token in production
+    window.location.href = `${apiUrl}/auth/discord`;
+  }
+
+  /**
    * Lưu session sau khi login thành công
    */
   setSession(token: string, user: User) {
     this._token.set(token);
     this._user.set(user);
-    
+
     if (isPlatformBrowser(this.platformId)) {
       localStorage.setItem('ds_token', token);
       localStorage.setItem('ds_user', JSON.stringify(user));
@@ -59,7 +67,7 @@ export class AuthService {
   logout() {
     this._token.set(null);
     this._user.set(null);
-    
+
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('ds_token');
       localStorage.removeItem('ds_user');

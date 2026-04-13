@@ -4,7 +4,7 @@
   "sourceRoot": "libs/web/feature-hof/src",
   "prefix": "lib",
   "projectType": "library",
-  "tags": [],
+  "tags": ["internal"],
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint"

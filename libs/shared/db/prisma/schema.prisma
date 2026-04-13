@@ -13,27 +13,54 @@ enum Role {
   MEMBER
 }
 
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hashed password
+  role      Role     @default(MEMBER)
+  avatarUrl String?
+  member    Member?  @relation(fields: [memberId], references: [id])
+  memberId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Member {
   id        String   @id @default(cuid())
-  discordId String   @unique
+  discordId String?  @unique
   ign       String
-  nickname  String
+  nickname  String   @unique
   points    Int      @default(0)
   gsCode    String?
   avatarUrl String?
   role      Role     @default(MEMBER)
   
+  // Account link
+  user      User?
+
+  // Future features
+  boxes     Box[]
+  
   // Fields from Google Sheets
   gender    String?
-  birthdate DateTime?
-  age       Int?
+  birthdate String?   // Keep as string for now to handle "ND" or partial dates
+  age       String?   // Keep as string for "ND"
   country   String?
-  aka       String?  // Biệt danh khác
-  status    String   @default("ACTIVE") // ACTIVE, FORMER
+  aka       String?   // Biệt danh khác
+  status    String    @default("ACTIVE") // ACTIVE, FORMER
   
   submissions Submission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Box {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String?
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Submission {
@@ -58,3 +85,4 @@ model Season {
   isActive  Boolean      @default(false)
   submissions Submission[]
 }
+

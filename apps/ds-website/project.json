@@ -4,7 +4,7 @@
   "projectType": "application",
   "prefix": "ds",
   "sourceRoot": "apps/ds-website/src",
-  "tags": [],
+  "tags": ["main"],
   "targets": {
     "build": {
       "executor": "@nx/angular:application",

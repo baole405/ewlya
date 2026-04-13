@@ -9,16 +9,78 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@ds/db": ["libs/shared/db/src/index.ts"],
-      "@ds/shared/models": ["libs/shared/models/src/index.ts"],
-      "@ds/shared/env": ["libs/shared/env/src/index.ts"],
-      "@ds/web/data-access": ["libs/web/data-access/src/index.ts"],
-      "@ds/api/feature-members": ["libs/api/feature-members/src/index.ts"],
-      "@ds/bot/discord": ["libs/bot/discord/src/index.ts"],
-      "@ds/api/auth": ["libs/api/auth/src/index.ts"],
-      "@ds/web/feature-admin": ["libs/web/feature-admin/src/index.ts"],
-      "@ds/web/ui-custom": ["libs/web/ui-custom/src/index.ts"],
-      "@ds/web/ui-spartan": ["libs/web/ui-spartan/src/index.ts"]
+      "@ds/db": [
+        "libs/shared/db/src/index.ts"
+      ],
+      "@ds/shared/models": [
+        "libs/shared/models/src/index.ts"
+      ],
+      "@ds/shared/env": [
+        "libs/shared/env/src/index.ts"
+      ],
+      "@ds/web/data-access": [
+        "libs/web/data-access/src/index.ts"
+      ],
+      "@ds/api/feature-members": [
+        "libs/api/feature-members/src/index.ts"
+      ],
+      "@ds/bot/discord": [
+        "libs/bot/discord/src/index.ts"
+      ],
+      "@ds/api/auth": [
+        "libs/api/auth/src/index.ts"
+      ],
+      "@ds/web/feature-admin": [
+        "libs/web/feature-admin/src/index.ts"
+      ],
+      "@ds/web/ui-custom": [
+        "libs/web/ui-custom/src/index.ts"
+      ],
+      "@ds/web/ui-spartan": [
+        "libs/web/ui-spartan/src/index.ts"
+      ],
+      "@ds/web/feature-auth": [
+        "libs/web/feature-auth/src/index.ts"
+      ],
+      "@spartan-ng/helm/sidebar": [
+        "libs/web/ui-spartan/sidebar/src/index.ts"
+      ],
+      "@spartan-ng/helm/utils": [
+        "libs/web/ui-spartan/utils/src/index.ts"
+      ],
+      "@spartan-ng/helm/button": [
+        "libs/web/ui-spartan/button/src/index.ts"
+      ],
+      "@spartan-ng/helm/icon": [
+        "libs/web/ui-spartan/icon/src/index.ts"
+      ],
+      "@spartan-ng/helm/input": [
+        "libs/web/ui-spartan/input/src/index.ts"
+      ],
+      "@spartan-ng/helm/separator": [
+        "libs/web/ui-spartan/separator/src/index.ts"
+      ],
+      "@spartan-ng/helm/sheet": [
+        "libs/web/ui-spartan/sheet/src/index.ts"
+      ],
+      "@spartan-ng/helm/skeleton": [
+        "libs/web/ui-spartan/skeleton/src/index.ts"
+      ],
+      "@spartan-ng/helm/tooltip": [
+        "libs/web/ui-spartan/tooltip/src/index.ts"
+      ],
+      "@spartan-ng/helm/breadcrumb": [
+        "libs/web/ui-spartan/breadcrumb/src/index.ts"
+      ],
+      "@spartan-ng/helm/collapsible": [
+        "libs/web/ui-spartan/collapsible/src/index.ts"
+      ],
+      "@spartan-ng/helm/dropdown-menu": [
+        "libs/web/ui-spartan/dropdown-menu/src/index.ts"
+      ],
+      "@spartan-ng/helm/avatar": [
+        "libs/web/ui-spartan/avatar/src/index.ts"
+      ]
     }
   }
 }

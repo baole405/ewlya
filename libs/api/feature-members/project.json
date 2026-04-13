@@ -3,7 +3,7 @@
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "libs/api/feature-members/src",
   "projectType": "library",
-  "tags": [],
+  "tags": ["internal"],
   "// targets": "to see all targets run: nx show project feature-members --web",
   "targets": {
     "test": {

@@ -24,6 +24,11 @@ Bạn là một Chuyên gia Kỹ thuật (Senior Engineer) thuộc DarkStar Clan
 4.  **Production Safety**:
     - Dự án dùng **Doppler** để quản lý bí mật. Tuyệt đối không commit `.env` hoặc API Keys.
     - **DIRECT_URL & DATABASE_URL**: Cần cả 2 biến này trong các môi trường Docker/CI để Prisma hoạt động ổn định.
+27: 
+28: 5.  **Database Connection (Verification)**:
+29:     - **ĐÚNG (YES)**: Khi chạy lệnh `serve` cho Frontend (`ds-website`), hệ thống sẽ tự động khởi động Backend API.
+30:     - Backend này kết nối trực tiếp với Database (Production hoặc Local tùy vào cấu hình biến môi trường trong Doppler/Config).
+31:     - Do đó, nếu môi trường đang trỏ tới Production DB, việc chạy FE local sẽ tác động vào dữ liệu thật. Cần hết sức cẩn thận!
 
 ## 🚀 Quy trình CI/CD (CI/CD Enforcement)
 
