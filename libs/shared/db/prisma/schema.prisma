@@ -47,7 +47,7 @@ model Member {
   age       String?   // Keep as string for "ND"
   country   String?
   aka       String?   // Biệt danh khác
-  status    String    @default("ACTIVE") // ACTIVE, FORMER
+  status    String    @default("OFFICIAL") // OFFICIAL, TRIAL, FORMER, BANNED
   
   submissions Submission[]
   createdAt   DateTime @default(now())

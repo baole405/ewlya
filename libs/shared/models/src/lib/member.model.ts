@@ -16,7 +16,7 @@ export interface Member {
   country?: string | null;
   aka?: string | null;
 
-  status: 'ACTIVE' | 'FORMER' | string;
+  status: 'OFFICIAL' | 'TRIAL' | 'FORMER' | 'BANNED' | string;
   createdAt: Date;
   updatedAt: Date;
 }

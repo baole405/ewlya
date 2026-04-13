@@ -67,7 +67,7 @@ import {
                   <span
                     class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
                     [ngClass]="
-                      member.status === 'ACTIVE'
+                      member.status === 'OFFICIAL'
                         ? 'bg-success/20 text-success'
                         : 'bg-muted text-muted-foreground'
                     "
