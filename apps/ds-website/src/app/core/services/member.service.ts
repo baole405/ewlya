@@ -18,6 +18,10 @@ export class MemberService {
       points: 2500,
       rank: 1,
       avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grimex',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     {
       id: '2',
@@ -28,6 +32,10 @@ export class MemberService {
       points: 2450,
       rank: 2,
       avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bahan',
+      role: 'MEMBER',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     {
       id: '3',
@@ -38,6 +46,10 @@ export class MemberService {
       points: 1800,
       rank: 3,
       avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fan',
+      role: 'MEMBER',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
     {
       id: '4',
@@ -48,29 +60,16 @@ export class MemberService {
       points: 1200,
       rank: 4,
       avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noctis',
+      role: 'MEMBER',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
     },
   ];
 
   // Resource for fetching members (Prisma only on server)
   private membersResource = resource({
     loader: async () => {
-      /* 
-      // ❌ ILLEGAL: Prisma không khả dụng trong trình duyệt.
-      // Cần thay thế bằng một yêu cầu HTTP đến API Render trong tương lai.
-      if (isPlatformServer(this.platformId)) {
-        try {
-          const dbMembers = await prisma.member.findMany({
-            orderBy: { points: 'desc' },
-          });
-
-          if (dbMembers.length > 0) {
-            return dbMembers as unknown as Member[];
-          }
-        } catch (error) {
-          console.error('Error fetching members from Prisma:', error);
-        }
-      }
-      */
       return this.mockMembers;
     },
   });

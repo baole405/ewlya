@@ -56,3 +56,12 @@ node_modules
 .angular
 
 vitest.config.*.timestamp*
+.nx/polygraph
+.claude/worktrees
+.claude/settings.local.json
+
+# Others
+.agents/
+.codex/
+.cursor/
+.opencode/

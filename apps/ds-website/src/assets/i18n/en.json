@@ -1,0 +1,23 @@
+{
+  "COMMON": {
+    "APP_NAME": "DarkStar",
+    "ADMIN": "Administrator",
+    "LOGOUT": "LOGOUT",
+    "SETTINGS": "SETTINGS",
+    "ACTIONS": "Actions"
+  },
+  "SIDEBAR": {
+    "NAVIGATION": "NAVIGATION",
+    "SYSTEM": "SYSTEM",
+    "DASHBOARD": "Dashboard",
+    "MEMBERS": "Members",
+    "SEASONS": "Seasons",
+    "ACCOUNT": "Account",
+    "BACK_TO_HOME": "Back to Home"
+  },
+  "DASHBOARD": {
+    "WELCOME": "Welcome back",
+    "BREADCRUMB_ROOT": "DarkStar",
+    "BREADCRUMB_ADMIN": "Admin"
+  }
+}

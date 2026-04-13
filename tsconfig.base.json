@@ -12,13 +12,13 @@
       "@ds/db": ["libs/shared/db/src/index.ts"],
       "@ds/shared/models": ["libs/shared/models/src/index.ts"],
       "@ds/shared/env": ["libs/shared/env/src/index.ts"],
-      "@ds/web/feature-home": ["libs/web/feature-home/src/index.ts"],
-      "@ds/web/feature-hof": ["libs/web/feature-hof/src/index.ts"],
       "@ds/web/data-access": ["libs/web/data-access/src/index.ts"],
       "@ds/api/feature-members": ["libs/api/feature-members/src/index.ts"],
       "@ds/bot/discord": ["libs/bot/discord/src/index.ts"],
       "@ds/api/auth": ["libs/api/auth/src/index.ts"],
-      "@ds/web/feature-admin": ["libs/web/feature-admin/src/index.ts"]
+      "@ds/web/feature-admin": ["libs/web/feature-admin/src/index.ts"],
+      "@ds/web/ui-custom": ["libs/web/ui-custom/src/index.ts"],
+      "@ds/web/ui-spartan": ["libs/web/ui-spartan/src/index.ts"]
     }
   }
 }
