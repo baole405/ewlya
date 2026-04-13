@@ -50,7 +50,7 @@ export default [
         'error',
         {
           type: 'attribute',
-          prefix: ['ds', 'hlm'],
+          prefix: ['ds', 'hlm', 'spartan'],
           style: 'camelCase',
         },
       ],
@@ -58,7 +58,7 @@ export default [
         'error',
         {
           type: 'element',
-          prefix: ['ds', 'hlm'],
+          prefix: ['ds', 'hlm', 'spartan'],
           style: 'kebab-case',
         },
       ],

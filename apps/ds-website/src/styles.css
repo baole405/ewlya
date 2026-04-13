@@ -33,7 +33,7 @@
   --color-warning-content: oklch(20% 0.04 84);
   --color-error: oklch(65% 0.2 25);
   --color-error-content: oklch(93% 0.02 25);
-  
+
   /* Spartan UI (shadcn) variables mapping */
   --background: 8% 0 0;
   --foreground: 93% 0.01 90;
@@ -92,6 +92,41 @@
   --font-heading: 'Bebas Neue', 'Impact', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   font-family: var(--font-body);
+
+  /* ============================================================
+     SHADCN/UI — TAUPE DARK THEME
+     Used by Admin Panel components (ui-shadcn library)
+     ============================================================ */
+  --background: 30 20% 7%;
+  --foreground: 30 15% 90%;
+  --card: 30 18% 10%;
+  --card-foreground: 30 15% 90%;
+  --popover: 30 18% 10%;
+  --popover-foreground: 30 15% 90%;
+  --primary: 30 22% 60%;
+  --primary-foreground: 30 20% 7%;
+  --secondary: 30 18% 15%;
+  --secondary-foreground: 30 15% 85%;
+  --muted: 30 18% 13%;
+  --muted-foreground: 30 10% 55%;
+  --accent: 30 18% 15%;
+  --accent-foreground: 30 15% 85%;
+  --destructive: 0 62% 40%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 30 18% 18%;
+  --input: 30 18% 18%;
+  --ring: 30 22% 60%;
+  --radius: 0.5rem;
+
+  /* Shadcn Sidebar — Taupe Dark */
+  --sidebar-background: 30 20% 9%;
+  --sidebar-foreground: 30 15% 88%;
+  --sidebar-primary: 30 22% 58%;
+  --sidebar-primary-foreground: 30 20% 7%;
+  --sidebar-accent: 30 18% 14%;
+  --sidebar-accent-foreground: 30 15% 85%;
+  --sidebar-border: 30 18% 16%;
+  --sidebar-ring: 30 22% 58%;
 }
 
 /* Utility classes for the design system */
@@ -135,18 +170,32 @@ html {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 
 .animate-fade-in-up {

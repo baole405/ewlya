@@ -1,0 +1,23 @@
+{
+  "COMMON": {
+    "APP_NAME": "DarkStar",
+    "ADMIN": "Quản trị viên",
+    "LOGOUT": "ĐĂNG XUẤT",
+    "SETTINGS": "CÀI ĐẶT",
+    "ACTIONS": "Hành động"
+  },
+  "SIDEBAR": {
+    "NAVIGATION": "ĐIỀU HƯỚNG",
+    "SYSTEM": "HỆ THỐNG",
+    "DASHBOARD": "Bàn làm việc",
+    "MEMBERS": "Thành viên",
+    "SEASONS": "Mùa giải",
+    "ACCOUNT": "Tài khoản",
+    "BACK_TO_HOME": "Quay lại trang chủ"
+  },
+  "DASHBOARD": {
+    "WELCOME": "Chào mừng trở lại",
+    "BREADCRUMB_ROOT": "DarkStar",
+    "BREADCRUMB_ADMIN": "Admin"
+  }
+}

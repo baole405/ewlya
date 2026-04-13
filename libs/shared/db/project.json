@@ -22,6 +22,24 @@
         "jestConfig": "libs/shared/db/jest.config.ts",
         "passWithNoTests": true
       }
+    },
+    "prisma-generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma generate --schema=libs/shared/db/prisma/schema.prisma"
+      }
+    },
+    "db-push": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma db push --schema=libs/shared/db/prisma/schema.prisma"
+      }
+    },
+    "prisma-studio": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma studio --schema=libs/shared/db/prisma/schema.prisma"
+      }
     }
   }
 }

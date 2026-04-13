@@ -29,7 +29,7 @@ export class DiscordStrategy extends PassportStrategy(Strategy, 'discord') {
     const avatarUrl = `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`;
 
     // Check whitelist from .env
-    const adminIds = (process.env['ADMIN_IDS'] || '').split(',');
+    const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map((id) => id.trim());
     const isAdmin = adminIds.includes(id);
 
     // Find or create member/user in DB
