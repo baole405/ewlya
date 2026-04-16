@@ -126,7 +126,7 @@ async function main() {
     {
       nickname: 'Miyubi',
       ign: 'Miyubi',
-      discordId: '000000000000000000',
+      discordId: null,
       gender: 'M',
       age: null,
       birthdate: '9/2/2004',
@@ -144,7 +144,7 @@ async function main() {
     {
       nickname: 'Mangagirl',
       ign: 'H16',
-      discordId: '000000000000000000',
+      discordId: null,
       gsCode: '151988668',
       gender: 'M',
       age: '22',
@@ -154,7 +154,7 @@ async function main() {
     {
       nickname: 'Filo',
       ign: 'FL FILO',
-      discordId: '000000000000000000',
+      discordId: null,
       gender: 'M',
       age: '24',
       birthdate: '14/04/2004',
@@ -163,7 +163,7 @@ async function main() {
     {
       nickname: 'Astolfo',
       ign: 'CesSimp',
-      discordId: '000000000000000000',
+      discordId: null,
       gender: 'M',
       age: '19',
       birthdate: '31/01/2005',

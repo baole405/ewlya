@@ -1,4 +1,5 @@
-import '@analogjs/vitest-angular/setup-vitest';
+import '@angular/compiler';
+import '@analogjs/vitest-angular/setup-zone';
 
 import {
   BrowserDynamicTestingModule,

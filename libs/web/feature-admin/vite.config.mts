@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import angular from '@analogjs/vite-plugin-angular';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
+import * as path from 'path';
 
 export default defineConfig(() => ({
   root: __dirname,
@@ -10,7 +11,7 @@ export default defineConfig(() => ({
   plugins: [angular(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
   resolve: {
     alias: {
-      '@ds/web/data-access': '../../../libs/web/data-access/src/index.ts',
+      '@ds/web/data-access': path.resolve(__dirname, '../../../libs/web/data-access/src/index.ts'),
     },
   },
   test: {
