@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '@ds/db';
+import { Prisma } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DiscordBotService } from '@ds/bot/discord';
 
@@ -10,7 +11,7 @@ export class ProgressionService {
   async getAllChecks(status: 'active' | 'ended' | 'trash' = 'active') {
     const now = new Date();
 
-    const where: any = {};
+    const where: Prisma.ProgressionCheckWhereInput = {};
     if (status === 'trash') {
       where.deletedAt = { not: null };
     } else {
@@ -28,6 +29,7 @@ export class ProgressionService {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        requirements: true,
         _count: {
           select: { memberStatuses: true },
         },
@@ -67,8 +69,9 @@ export class ProgressionService {
     // Filter requirement statuses to only those belonging to this check
     const requirementIds = check.requirements.map((r) => r.id);
     check.memberStatuses.forEach((ms) => {
-      (ms.member as any).requirementStatuses = (ms.member as any).requirementStatuses.filter(
-        (rs: any) => requirementIds.includes(rs.requirementId),
+      const member = ms.member as { requirementStatuses: { requirementId: string }[] };
+      member.requirementStatuses = member.requirementStatuses.filter((rs) =>
+        requirementIds.includes(rs.requirementId),
       );
     });
 
@@ -159,7 +162,7 @@ export class ProgressionService {
   }
 
   async updateMemberStatus(statusId: string, data: { isCompleted?: boolean; note?: string }) {
-    const updateData: any = { ...data };
+    const updateData: Prisma.MemberProgressionStatusUpdateInput = { ...data };
 
     if (data.isCompleted !== undefined) {
       updateData.completedAt = data.isCompleted ? new Date() : null;

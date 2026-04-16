@@ -18,9 +18,16 @@ jest.mock('@ds/db', () => ({
     member: {
       findMany: jest.fn(),
     },
+    memberRequirementStatus: {
+      update: jest.fn(),
+      createMany: jest.fn(),
+    },
     memberProgressionStatus: {
       update: jest.fn(),
       createMany: jest.fn(),
+    },
+    progressionRequirement: {
+      create: jest.fn(),
     },
     $transaction: jest.fn((callback) => callback(prisma)),
   },
@@ -50,25 +57,37 @@ describe('ProgressionService', () => {
       const result = await service.getAllChecks();
 
       expect(result).toEqual(mockChecks);
-      expect(prisma.progressionCheck.findMany).toHaveBeenCalledWith({
-        orderBy: { createdAt: 'desc' },
-        include: {
-          _count: {
-            select: { memberStatuses: true },
+      expect(prisma.progressionCheck.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            deletedAt: null,
+            OR: [{ endDate: null }, { endDate: { gte: expect.any(Date) } }],
           },
-        },
-      });
+          orderBy: { createdAt: 'desc' },
+          include: {
+            requirements: true,
+            _count: {
+              select: { memberStatuses: true },
+            },
+          },
+        }),
+      );
     });
   });
 
   describe('createCheck', () => {
     it('should create a check, upsert title, and create member statuses in a transaction', async () => {
-      const dto = { title: 'New Check', description: 'Desc' };
+      const dto = {
+        title: 'New Check',
+        description: 'Desc',
+        requirements: [{ title: 'Req 1' }, { title: 'Req 2' }],
+      };
       const mockMembers = [{ id: 'm1' }, { id: 'm2' }];
-      const mockCreatedCheck = { id: 'c1', ...dto };
+      const mockCreatedCheck = { id: 'c1', title: dto.title, description: dto.description };
 
       (prisma.member.findMany as jest.Mock).mockResolvedValue(mockMembers);
       (prisma.progressionCheck.create as jest.Mock).mockResolvedValue(mockCreatedCheck);
+      (prisma.progressionRequirement.create as jest.Mock).mockResolvedValue({ id: 'req1' });
 
       const result = await service.createCheck(dto);
 
@@ -79,8 +98,15 @@ describe('ProgressionService', () => {
         create: { title: dto.title },
       });
       expect(prisma.progressionCheck.create).toHaveBeenCalledWith({
-        data: dto,
+        data: {
+          title: dto.title,
+          description: dto.description,
+          startDate: expect.any(Date),
+          endDate: undefined,
+        },
       });
+      expect(prisma.progressionRequirement.create).toHaveBeenCalledTimes(2);
+      expect(prisma.memberRequirementStatus.createMany).toHaveBeenCalledTimes(2);
       expect(prisma.memberProgressionStatus.createMany).toHaveBeenCalled();
     });
   });

@@ -8,6 +8,11 @@ export default defineConfig(() => ({
   root: __dirname,
   cacheDir: '../../../node_modules/.vite/libs/web/feature-admin',
   plugins: [angular(), nxViteTsPaths(), nxCopyAssetsPlugin(['*.md'])],
+  resolve: {
+    alias: {
+      '@ds/web/data-access': '../../../libs/web/data-access/src/index.ts',
+    },
+  },
   test: {
     name: 'feature-admin',
     watch: false,

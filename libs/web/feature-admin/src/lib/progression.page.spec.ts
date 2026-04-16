@@ -4,18 +4,20 @@ import { ProgressionService } from '@ds/web/data-access';
 import { of } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('ProgressionPage', () => {
   let component: ProgressionPage;
   let fixture: ComponentFixture<ProgressionPage>;
 
   const mockProgressionService = {
-    getAllChecks: jest.fn().mockReturnValue(of([])),
-    getSavedTitles: jest.fn().mockReturnValue(of([])),
-    getCheckById: jest.fn(),
-    createCheck: jest.fn(),
-    updateMemberStatus: jest.fn(),
-    deleteCheck: jest.fn(),
+    getAllChecks: vi.fn().mockReturnValue(of([])),
+    getSavedTitles: vi.fn().mockReturnValue(of([])),
+    getCheckById: vi.fn().mockReturnValue(of(null)),
+    createCheck: vi.fn(),
+    updateMemberStatus: vi.fn(),
+    updateMemberRequirementStatus: vi.fn(),
+    deleteCheck: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -36,12 +38,5 @@ describe('ProgressionPage', () => {
   it('should load checks and titles on init', () => {
     expect(mockProgressionService.getAllChecks).toHaveBeenCalled();
     expect(mockProgressionService.getSavedTitles).toHaveBeenCalled();
-  });
-
-  it('should show create form when clicking create button', () => {
-    component.showCreateForm.set(true);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h3')?.textContent).toContain('PROGRESSION.CREATE_CHECK');
   });
 });

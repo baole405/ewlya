@@ -14,6 +14,7 @@ describe('ProgressionController', () => {
     getSavedTitles: jest.fn(),
     createCheck: jest.fn(),
     updateMemberStatus: jest.fn(),
+    updateMemberRequirementStatus: jest.fn(),
     deleteCheck: jest.fn(),
   };
 
@@ -37,7 +38,8 @@ describe('ProgressionController', () => {
     service = module.get<ProgressionService>(ProgressionService);
 
     // Ensure the service is attached to the controller (sometimes required in manual mocks)
-    (controller as any).progressionService = service;
+    (controller as unknown as { progressionService: ProgressionService }).progressionService =
+      service;
   });
 
   it('should be defined', () => {
@@ -59,10 +61,25 @@ describe('ProgressionController', () => {
   });
 
   describe('createCheck', () => {
-    it('should call service.createCheck with body data', async () => {
-      const dto = { title: 'Test', description: 'Test' };
+    it('should call service.createCheck with body data and requirements', async () => {
+      const dto = { title: 'Test', description: 'Test', requirements: [{ title: 'R1' }] };
       await controller.createCheck(dto);
-      expect(service.createCheck).toHaveBeenCalledWith(dto);
+      expect(service.createCheck).toHaveBeenCalledWith({
+        title: dto.title,
+        description: dto.description,
+        requirements: dto.requirements,
+        startDate: undefined,
+        endDate: undefined,
+      });
+    });
+  });
+
+  describe('updateMemberRequirementStatus', () => {
+    it('should call service.updateMemberRequirementStatus', async () => {
+      const reqStatusId = 'rs1';
+      const body = { isMet: true };
+      await controller.updateMemberRequirementStatus(reqStatusId, body);
+      expect(service.updateMemberRequirementStatus).toHaveBeenCalledWith(reqStatusId, body.isMet);
     });
   });
 });
