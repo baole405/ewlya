@@ -95,9 +95,17 @@ export class LoginPage {
   password = '';
 
   login() {
-    console.log('Login with username:', this.username);
-    // TODO: Implement password login later
-    alert('Vui lòng sử dụng Login with Discord (Best effort)');
+    if (!this.username || !this.password) return;
+
+    this.auth.login(this.username, this.password).subscribe({
+      next: () => {
+        this.router.navigate(['/admin/members']);
+      },
+      error: (err) => {
+        console.error('Login error:', err);
+        alert('Tài khoản hoặc mật khẩu không đúng');
+      },
+    });
   }
 
   loginWithDiscord() {

@@ -9,6 +9,7 @@ import {
   lucideLifeBuoy,
   lucideSend,
   lucideBoxes,
+  lucideCheckCircle,
 } from '@ng-icons/lucide';
 import { HlmSidebarImports } from '@spartan-ng/helm/sidebar';
 import { HlmBreadCrumbImports } from '@spartan-ng/helm/breadcrumb';
@@ -36,6 +37,7 @@ import { NavUserComponent } from './nav-user.component';
       lucideLifeBuoy,
       lucideSend,
       lucideBoxes,
+      lucideCheckCircle,
     }),
   ],
   template: `
@@ -140,6 +142,11 @@ export class AdminShellComponent {
       url: '/admin/members',
       icon: 'lucideUsers',
       isActive: true,
+    },
+    {
+      title: 'SIDEBAR.PROGRESSION',
+      url: '/admin/progression',
+      icon: 'lucideCheckCircle',
     },
     {
       title: 'SIDEBAR.SETTINGS',

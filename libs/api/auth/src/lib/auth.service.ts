@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { prisma } from '@ds/db';
+import * as bcrypt from 'bcrypt';
 
 export interface JwtPayload {
   userId: string;
@@ -12,9 +14,21 @@ export interface JwtPayload {
 export class AuthService {
   constructor(private jwtService: JwtService) {}
 
-  async login(user: JwtPayload) {
+  async validateUser(username: string, pass: string): Promise<any> {
+    const user = await prisma.user.findUnique({
+      where: { username },
+    });
+
+    if (user && (await bcrypt.compare(pass, user.password))) {
+      const { password, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+
+  async login(user: any) {
     const payload = {
-      sub: user.userId,
+      sub: user.id || user.userId,
       discordId: user.discordId,
       username: user.username,
       role: user.role,
@@ -22,7 +36,7 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
       user: {
-        id: user.userId,
+        id: user.id || user.userId,
         username: user.username,
         role: user.role,
       },

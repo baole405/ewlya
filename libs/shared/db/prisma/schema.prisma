@@ -50,6 +50,8 @@ model Member {
   status    String    @default("OFFICIAL") // OFFICIAL, TRIAL, FORMER, BANNED
   
   submissions Submission[]
+  progression   MemberProgressionStatus[]
+  requirementStatuses MemberRequirementStatus[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -84,5 +86,62 @@ model Season {
   endDate   DateTime?
   isActive  Boolean      @default(false)
   submissions Submission[]
+}
+
+model ProgressionCheck {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  memberStatuses MemberProgressionStatus[]
+  requirements   ProgressionRequirement[]
+}
+
+model MemberProgressionStatus {
+  id                 String           @id @default(cuid())
+  progressionCheckId String
+  progressionCheck   ProgressionCheck @relation(fields: [progressionCheckId], references: [id], onDelete: Cascade)
+  memberId           String
+  member             Member           @relation(fields: [memberId], references: [id])
+  isCompleted        Boolean          @default(false)
+  completedAt        DateTime?
+  note               String?
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([progressionCheckId, memberId])
+}
+
+model ProgressionTitle {
+  id    String @id @default(cuid())
+  title String @unique
+}
+
+model ProgressionRequirement {
+  id                 String                    @id @default(cuid())
+  progressionCheckId String
+  progressionCheck   ProgressionCheck          @relation(fields: [progressionCheckId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  targetValue        String?                   // Optional target value (e.g., "10")
+  deletedAt          DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  memberStatuses     MemberRequirementStatus[]
+}
+
+model MemberRequirementStatus {
+  id            String                 @id @default(cuid())
+  requirementId String
+  requirement   ProgressionRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  memberId      String
+  member        Member                 @relation(fields: [memberId], references: [id])
+  isMet         Boolean                @default(false)
+  updatedAt     DateTime               @updatedAt
+
+  @@unique([requirementId, memberId])
 }
 

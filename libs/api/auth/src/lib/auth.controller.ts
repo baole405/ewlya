@@ -1,4 +1,13 @@
-import { Controller, Get, UseGuards, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  Res,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -18,11 +27,26 @@ export class AuthController {
   @Get('discord/callback')
   @UseGuards(AuthGuard('discord'))
   @ApiOperation({ summary: 'Callback từ Discord sau khi login' })
-  async discordAuthCallback(@Req() req: { user: any }, @Res() res: { redirect: (url: string) => void }) {
+  async discordAuthCallback(
+    @Req() req: { user: any },
+    @Res() res: { redirect: (url: string) => void },
+  ) {
     const { access_token, user } = await this.authService.login(req.user);
-    
+
     // Redirect về frontend kèm token
     const frontendUrl = process.env['FRONTEND_URL'] || 'http://localhost:4200';
-    return res.redirect(`${frontendUrl}/auth/callback?token=${access_token}&user=${JSON.stringify(user)}`);
+    return res.redirect(
+      `${frontendUrl}/auth/callback?token=${access_token}&user=${JSON.stringify(user)}`,
+    );
+  }
+
+  @Post('login')
+  @ApiOperation({ summary: 'Đăng nhập thủ công bằng username/password' })
+  async login(@Body() body: any) {
+    const user = await this.authService.validateUser(body.username, body.password);
+    if (!user) {
+      throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
+    }
+    return this.authService.login(user);
   }
 }

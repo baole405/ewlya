@@ -175,13 +175,14 @@ GUILD_ID           = 1179416079878078616
 
 Sau khi hoàn thành 4 bước trên, hãy kiểm tra:
 
-| Kiểm tra                      | Cách test                                      | Kỳ vọng          |
-| :---------------------------- | :--------------------------------------------- | :---------------- |
 | Website online                | Mở `darkstar-clan.pages.dev`                   | Thấy trang Home   |
 | API online                    | Mở `darkstar-api.onrender.com/api/docs`        | Thấy Swagger UI   |
 | Bot online                    | Gõ lệnh bot trên Discord server                | Bot trả lời       |
-| Database có data              | Mở Supabase Dashboard → Table Editor           | Thấy 3 bảng       |
+| Database có data              | Mở Supabase Dashboard → Table Editor           | Thấy 6 bảng       |
 | Tắt máy → Bot vẫn sống       | Tắt laptop, đợi 5 phút, gõ lệnh bot           | Bot vẫn trả lời ✅ |
+
+> [!IMPORTANT]
+> Việc thiết lập Uptime Monitor ở Bước 8.3 là BẮT BUỘC để đảm bảo các tính năng tự động (Lifecycle Cleanup, Daily Report) hoạt động đúng giờ.
 
 ---
 

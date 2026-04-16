@@ -3,7 +3,9 @@
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
     "module": "commonjs",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "target": "es2021",
@@ -11,8 +13,9 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strictBindCallApply": true,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

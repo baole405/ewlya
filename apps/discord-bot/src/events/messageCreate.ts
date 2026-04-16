@@ -60,4 +60,6 @@ export async function execute(message: Message) {
       `Chào **${message.author.username}**! Bạn có thể hỏi tôi về 'ign', 'gs code' hoặc 'điểm' bằng cách mention nhé! ✨`,
     );
   }
+
+  return;
 }

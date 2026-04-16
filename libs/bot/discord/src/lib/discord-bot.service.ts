@@ -1,7 +1,18 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Client, GatewayIntentBits, Partials, Events, Interaction, MessageReaction, PartialMessageReaction, User, PartialUser } from 'discord.js';
+import {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  Events,
+  Interaction,
+  MessageReaction,
+  PartialMessageReaction,
+  User,
+  PartialUser,
+} from 'discord.js';
 import { handleInteractionCreate } from './events/interaction-create.handler';
 import { handleMessageReactionAdd } from './events/message-reaction-add.handler';
+import { handleMessageCreate } from './events/message-create.handler';
 
 @Injectable()
 export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
@@ -63,16 +74,44 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     // Reaction (✅ reaction triggers point flow)
-    this.client.on(Events.MessageReactionAdd, async (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => {
+    this.client.on(
+      Events.MessageReactionAdd,
+      async (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => {
+        try {
+          await handleMessageReactionAdd(reaction, user);
+        } catch (err) {
+          this.logger.error('❌ Error in MessageReactionAdd:', err);
+        }
+      },
+    );
+
+    // Message (commands)
+    this.client.on(Events.MessageCreate, async (message) => {
       try {
-        await handleMessageReactionAdd(reaction, user);
+        await handleMessageCreate(message);
       } catch (err) {
-        this.logger.error('❌ Error in MessageReactionAdd:', err);
+        this.logger.error('❌ Error in MessageCreate:', err);
       }
     });
   }
 
   getClient(): Client {
     return this.client;
+  }
+
+  async sendMessage(channelId: string, content: string | any) {
+    if (!this.client.isReady()) {
+      this.logger.warn('⚠️ Client not ready, skipping message send.');
+      return;
+    }
+
+    try {
+      const channel = await this.client.channels.fetch(channelId);
+      if (channel?.isTextBased()) {
+        await (channel as any).send(content);
+      }
+    } catch (err) {
+      this.logger.error(`❌ Failed to send message to channel ${channelId}:`, err);
+    }
   }
 }

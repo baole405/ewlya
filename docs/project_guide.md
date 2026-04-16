@@ -88,10 +88,11 @@ ewlya/
 │   ├── web/                       # [FRONTEND ONLY] Angular libraries
 │   │   ├── feature-home/          # Home page component
 │   │   ├── feature-hof/           # Hall of Flame leaderboard component
-│   │   └── data-access/           # MemberService (HTTP calls to API)
+│   │   ├── feature-admin/         # Admin management (Members, Settings, Progression)
+│   │   └── data-access/           # Services (Member, Progression HTTP calls)
 │   │
 │   ├── api/                       # [BACKEND ONLY] NestJS libraries
-│   │   └── feature-members/       # Members CRUD controller + service
+│   │   └── feature-members/       # Members CRUD, Progression lifecycle logic
 │   │
 │   └── bot/                       # [BOT] Discord event handlers
 │       └── discord/               # DiscordBotModule + DiscordBotService

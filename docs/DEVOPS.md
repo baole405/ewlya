@@ -57,4 +57,13 @@ Máy chủ Local dùng để tự động đồng bộ (Sync) mã nguồn.
 - Pipeline `local-sync` sẽ tự quản lý việc `git pull` và update môi trường.
 
 ---
+
+## 🕒 Background Workers & Cron Jobs
+
+Hệ thống sử dụng `@nestjs/schedule` để thực thi các tác vụ định kỳ. Khi vận hành trên Production:
+- **Render/VPS**: Đảm bảo dịch vụ Backend không bị đưa về chế độ sleep (Idle) để các hàm `@Cron` chạy đúng giờ.
+- **Monitoring**: Các lỗi trong quá trình chạy Cron (như Cleanup hoặc Discord Report) sẽ được log vào hệ thống Logging của Render.
+- **Biến môi trường**: Đảm bảo `DISCORD_TOKEN` luôn hợp lệ để tránh fail các tác vụ báo cáo tự động.
+
+---
 *Developed with 🩸 by DarkStar Clan Engineering Team.*

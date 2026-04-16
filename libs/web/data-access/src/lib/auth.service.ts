@@ -1,5 +1,8 @@
 import { Injectable, signal, inject, PLATFORM_ID, computed } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
+import { Observable, tap } from 'rxjs';
+import { API_URL } from './api-url.token';
 
 export interface User {
   id: string;
@@ -12,6 +15,8 @@ export interface User {
 })
 export class AuthService {
   private platformId = inject(PLATFORM_ID);
+  private http = inject(HttpClient);
+  private apiUrl = inject(API_URL);
 
   // State management via Signals
   private _user = signal<User | null>(null);
@@ -41,11 +46,21 @@ export class AuthService {
   }
 
   /**
+   * Đăng nhập bằng username/password
+   */
+  login(username: string, password: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/auth/login`, { username, password }).pipe(
+      tap((res) => {
+        this.setSession(res.access_token, res.user);
+      }),
+    );
+  }
+
+  /**
    * Chuyển hướng đến Auth Discord trên Backend
    */
   loginWithDiscord() {
-    const apiUrl = 'http://localhost:3000/api'; // TODO: Use Injection Token in production
-    window.location.href = `${apiUrl}/auth/discord`;
+    window.location.href = `${this.apiUrl}/auth/discord`;
   }
 
   /**

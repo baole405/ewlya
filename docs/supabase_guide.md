@@ -56,10 +56,13 @@ Your database is now in sync with your Prisma schema.
 
 ### Table Editor (Giao diện bảng — Giống Excel)
 1. Thanh menu bên trái → biểu tượng **Table Editor** (hình bảng).
-2. Sau khi `prisma db push`, bạn sẽ thấy 3 bảng:
+2. Sau khi `prisma db push`, bạn sẽ thấy 6 bảng chính:
    - `Member` — Danh sách thành viên
    - `Submission` — Bài nộp điểm
    - `Season` — Các mùa giải
+   - `ProgressionCheck` — Đợt kiểm tra tiến độ (mới)
+   - `MemberProgressionStatus` — Trạng thái chi tiết thành viên (mới)
+   - `ProgressionTitle` — Danh mục tên các đợt check (mới)
 3. Bấm vào bảng để xem/sửa/xóa dữ liệu trực tiếp (giống phpMyAdmin).
 
 ### SQL Editor (Chạy query thủ công)

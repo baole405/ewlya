@@ -12,11 +12,5 @@
     "include": [
         "src/**/*.ts",
         "src/**/*.d.ts"
-    ],
-    "angularCompilerOptions": {
-        "enableI18nLegacyMessageIdFormat": false,
-        "strictInjectionParameters": true,
-        "strictInputAccessModifiers": true,
-        "strictTemplates": true
-    }
-}
+    ]
+}

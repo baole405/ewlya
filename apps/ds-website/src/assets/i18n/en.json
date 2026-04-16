@@ -11,6 +11,7 @@
     "DASHBOARD": "Dashboard",
     "MEMBERS": "Members",
     "SEASONS": "Seasons",
+    "PROGRESSION": "Progression",
     "ACCOUNT": "Account",
     "SUPPORT": "Support",
     "FEEDBACK": "Feedback",
@@ -31,5 +32,17 @@
     "LANGUAGE_DESCRIPTION": "Select your preferred language.",
     "EN": "English",
     "VI": "Tiếng Việt"
+  },
+  "PROGRESSION": {
+    "TITLE": "Progression",
+    "DESCRIPTION": "Track completion of specific tasks for official members.",
+    "CREATE_CHECK": "New Progression Check",
+    "FORM_TITLE": "Title",
+    "FORM_DESCRIPTION": "Description",
+    "STATUS_COMPLETED": "Completed",
+    "STATUS_PENDING": "Pending",
+    "NOTE": "Note",
+    "REQUIRED_NOTE": "Note required if not completed",
+    "REPORT": "Report summary"
   }
 }

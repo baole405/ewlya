@@ -84,3 +84,16 @@ Hệ thống được chia làm 3 thành phần vi dịch vụ (Micro-services) 
    - Không xuất hiện thời gian Web/Bot bị sập nhờ cơ chế Zero-Downtime.
 4. **🔄 Đồng Bộ Hóa Dữ Liệu Thực (Live Data)**:
    - Cả Vercel (Front) và Render (Bot) đều chỏ ống hút Database của nó về chung cái "Bể chứa" là Aiven Cloud (PostgreSQL). Nhờ đó, bất cứ con quái vật nào Membear đánh hay điểm nào thu được thông qua Bot Discord ban đêm, thì Website Sáng hôm sau đều hiển thị chính xác y xì đúc trên Bảng Xếp Hạng.
+
+---
+
+## 4. Tác Vụ Lập Lịch (Scheduled Tasks / Cron Jobs)
+
+Hệ thống sử dụng `@nestjs/schedule` để tự động hóa các quy trình vận hành bảo trì:
+
+| Tên Tác Vụ | Tần Suất | Mục Đích |
+| :--- | :--- | :--- |
+| **Trash Cleanup** | Hàng ngày (00:00) | Xóa vĩnh viễn các đợt check đã nằm trong thùng rác > 30 ngày. |
+| **Discord Report** | Hàng ngày (09:00) | Quét các đợt check mới kết thúc và gửi báo cáo danh sách Red Flag (chưa hoàn thành) vào Discord. |
+
+*Lưu ý: Các tác vụ này chạy ngầm trên Backend (Render/Vercel Server) và không phụ thuộc vào việc người dùng có truy cập web hay không.*

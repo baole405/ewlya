@@ -659,6 +659,46 @@ libs/shared/db/prisma/schema.prisma
 | FR-064  | Multi-clan support                 | Won't (v1)     | 4 sprints  | —            |
 | FR-065  | Discord OAuth login on website     | 🟡 Should     | 1 sprint   | —            |
 | FR-066  | Points history chart (Chart.js)    | 🟡 Should     | 1 sprint   | FR-003       |
+| FR-070  | Progression Monitoring (Lifecycle) | 🔴 Must       | 2 sprints  | —            |
+
+---
+
+### FR-070: Progression Monitoring (Lifecycle)
+
+| Field            | Value                                                    |
+| :--------------- | :------------------------------------------------------- |
+| **ID**           | FR-070                                                   |
+| **Priority**     | 🔴 Must Have                                            |
+| **Status**       | ✅ Done                                                  |
+| **Module**       | `libs/api/feature-members`, `libs/web/feature-admin`     |
+
+**Description:**
+Hệ thống cho phép Admin tạo và theo dõi các đợt kiểm tra tiến độ (Progression Check) với vòng đời tự động.
+
+1. **Lifecycle Management**:
+   - **Active**: Đợt check đang trong thời gian hiệu lực (startDate <= now < endDate).
+   - **Ended**: Đợt check đã hết hạn hoặc được Admin chốt sớm (Force End).
+   - **Trash (Soft Delete)**: Đợt check bị xóa sẽ vào Thùng rác và được lưu giữ trong 30 ngày trước khi xóa vĩnh viễn.
+2. **Flag System (Status Tracking)**:
+   - 🔴 **Red Flag**: Thành viên chưa hoàn thành và đã quá hạn (now > endDate).
+   - 🟡 **Yellow Flag**: Thành viên hoàn thành nhưng trễ so với hạn (completedAt > endDate).
+   - 🟢 **Green Flag**: Thành viên hoàn thành đúng hạn (completedAt <= endDate).
+   - ⚪ **Grey/Normal**: Đợt check đang chạy và thành viên chưa xong.
+3. **Automated Features**:
+   - **Daily Cleanup**: Tự động xóa vĩnh viễn các mục trong thùng rác sau 30 ngày.
+   - **Discord Reporting**: Tự động gửi báo cáo danh sách "Red Flag" vào Discord lúc 9:00 sáng hàng ngày cho các đợt check vừa kết thúc.
+
+**Acceptance Criteria:**
+```gherkin
+Given an active progression check exists
+When the current time passes the endDate
+Then the system marks all incomplete members with a Red Flag
+And the Discord Bot sends a summary report to the designated channel
+
+Given a check is in the Trash
+When 30 days have passed since deletion
+Then the system permanently removes the record from the database
+```
 
 ---
 

@@ -63,7 +63,7 @@ graph TB
     end
 
     subgraph Supabase - Singapore
-        DB[("🐘 PostgreSQL 16<br/>──────────<br/>3 Tables:<br/>Member, Submission, Season<br/>──────────<br/>Connection Pooling<br/>(pgbouncer)")]
+        DB[("🐘 PostgreSQL 16<br/>──────────<br/>6 Tables:<br/>Member, Submission, Season,<br/>ProgressionCheck, Status,<br/>ProgressionTitle<br/>──────────<br/>Connection Pooling<br/>(pgbouncer)")]
     end
 
     subgraph Doppler ["Doppler (Planned)"]
@@ -212,6 +212,33 @@ sequenceDiagram
     BOT->>DC: Reply embed "✅ 100 points added to Grimex (Total: 2500)"
     BOT->>DC: Log to #contribute-logs channel
     DC-->>Mod: See confirmation embed
+
+---
+
+## 7. Sequence Diagram — Automated Progression Reporting
+
+> *"Hệ thống tự động quét và báo cáo những đợt check đã kết thúc nhưng thành viên chưa hoàn thành."*
+
+```mermaid
+sequenceDiagram
+    participant CRON as ⏰ NestJS Scheduler
+    participant API as ⚙️ NestJS API
+    participant DB as 🐘 Supabase DB
+    participant BOT as 🤖 Discord Bot
+    participant DC as 💬 Discord Channel
+
+    CRON->>API: Trigger reportEndedChecks (Every Day 09:00)
+    API->>DB: SELECT checks WHERE endDate < now AND reported = false
+    DB-->>API: [Overdue Checks]
+    
+    loop For each check
+        API->>DB: SELECT statuses WHERE isCompleted = false
+        DB-->>API: [Incomplete Members]
+        API->>BOT: Send report content
+        BOT->>DC: Post Embed (🔴 RED FLAGS: Raid Boss...)
+        API->>DB: UPDATE check SET reported = true
+    end
+```
 ```
 
 ---

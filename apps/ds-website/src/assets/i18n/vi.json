@@ -11,6 +11,7 @@
     "DASHBOARD": "Bàn làm việc",
     "MEMBERS": "Thành viên",
     "SEASONS": "Mùa giải",
+    "PROGRESSION": "Kiểm tra Tiến độ",
     "ACCOUNT": "Tài khoản",
     "SUPPORT": "Hỗ trợ",
     "FEEDBACK": "Góp ý",
@@ -31,5 +32,17 @@
     "LANGUAGE_DESCRIPTION": "Chọn ngôn ngữ ưu tiên của bạn.",
     "EN": "Tiếng Anh",
     "VI": "Tiếng Việt"
+  },
+  "PROGRESSION": {
+    "TITLE": "Kiểm tra Tiến độ",
+    "DESCRIPTION": "Theo dõi việc hoàn thành các nhiệm vụ cụ thể cho thành viên chính thức.",
+    "CREATE_CHECK": "Tạo đợt kiểm tra mới",
+    "FORM_TITLE": "Tiêu đề",
+    "FORM_DESCRIPTION": "Mô tả",
+    "STATUS_COMPLETED": "Đã hoàn thành",
+    "STATUS_PENDING": "Chưa xong",
+    "NOTE": "Ghi chú",
+    "REQUIRED_NOTE": "Bắt buộc ghi chú nếu chưa hoàn thành",
+    "REPORT": "Tổng kết báo cáo"
   }
 }

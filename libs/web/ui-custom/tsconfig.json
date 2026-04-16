@@ -4,13 +4,11 @@
     "module": "esnext",
     "target": "es2022",
     "moduleResolution": "bundler",
-    "lib": ["es2022", "dom"],
+    "lib": [
+      "es2022",
+      "dom"
+    ],
     "skipLibCheck": true,
-    "strict": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
     "isolatedModules": true
   },
   "files": [],

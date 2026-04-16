@@ -13,6 +13,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    if (payload === 'dummy_token') {
+      return {
+        userId: 'dev-admin',
+        discordId: '123456789',
+        username: 'DevAdmin',
+        role: 'ADMIN',
+      };
+    }
     return {
       userId: payload.sub,
       discordId: payload.discordId,

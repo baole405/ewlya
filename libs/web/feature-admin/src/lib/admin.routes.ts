@@ -14,6 +14,10 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./settings.page').then((m) => m.SettingsPage),
       },
       {
+        path: 'progression',
+        loadComponent: () => import('./progression.page').then((m) => m.ProgressionPage),
+      },
+      {
         path: '',
         redirectTo: 'members',
         pathMatch: 'full',
