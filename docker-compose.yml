@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: ewlya-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ewlya
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ewlya-api
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/ewlya?schema=public
+      - PORT=3000
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+    ports:
+      - "3000:3000"
+    command: npm run start:prod:api
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ewlya-bot
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/ewlya?schema=public
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+    command: node dist/bot/main.js
+
+volumes:
+  postgres_data:

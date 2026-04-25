@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // Hashed password
+  role      Role     @default(MEMBER)
+  avatarUrl String?
+  member    Member?  @relation(fields: [memberId], references: [id])
+  memberId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Member {
+  id        String   @id @default(cuid())
+  discordId String?  @unique
+  ign       String
+  nickname  String   @unique
+  points    Int      @default(0)
+  gsCode    String?
+  avatarUrl String?
+  role      Role     @default(MEMBER)
+  
+  // Account link
+  user      User?
+
+  // Future features
+  boxes     Box[]
+  
+  // Fields from Google Sheets
+  gender    String?
+  birthdate String?   // Keep as string for now to handle "ND" or partial dates
+  age       String?   // Keep as string for "ND"
+  country   String?
+  aka       String?   // Biệt danh khác
+  status    String    @default("OFFICIAL") // OFFICIAL, TRIAL, FORMER, BANNED
+  
+  submissions Submission[]
+  progression   MemberProgressionStatus[]
+  requirementStatuses MemberRequirementStatus[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Box {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String?
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Submission {
+  id         String   @id @default(cuid())
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id])
+  mission    String
+  reason     String?  // Lý do cập nhật điểm
+  rank       Int?
+  points     Int
+  seasonId   String
+  season     Season   @relation(fields: [seasonId], references: [id])
+  verifiedBy String   // Discord ID of admin who verified
+  createdAt  DateTime @default(now())
+}
+
+model Season {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean      @default(false)
+  submissions Submission[]
+}
+
+model ProgressionCheck {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  memberStatuses MemberProgressionStatus[]
+  requirements   ProgressionRequirement[]
+}
+
+model MemberProgressionStatus {
+  id                 String           @id @default(cuid())
+  progressionCheckId String
+  progressionCheck   ProgressionCheck @relation(fields: [progressionCheckId], references: [id], onDelete: Cascade)
+  memberId           String
+  member             Member           @relation(fields: [memberId], references: [id])
+  isCompleted        Boolean          @default(false)
+  completedAt        DateTime?
+  note               String?
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([progressionCheckId, memberId])
+}
+
+model ProgressionTitle {
+  id    String @id @default(cuid())
+  title String @unique
+}
+
+model ProgressionRequirement {
+  id                 String                    @id @default(cuid())
+  progressionCheckId String
+  progressionCheck   ProgressionCheck          @relation(fields: [progressionCheckId], references: [id], onDelete: Cascade)
+  title              String
+  description        String?
+  targetValue        String?                   // Optional target value (e.g., "10")
+  deletedAt          DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  memberStatuses     MemberRequirementStatus[]
+}
+
+model MemberRequirementStatus {
+  id            String                 @id @default(cuid())
+  requirementId String
+  requirement   ProgressionRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  memberId      String
+  member        Member                 @relation(fields: [memberId], references: [id])
+  isMet         Boolean                @default(false)
+  updatedAt     DateTime               @updatedAt
+
+  @@unique([requirementId, memberId])
+}
+
