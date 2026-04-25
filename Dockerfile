@@ -1,44 +1,41 @@
-# Stage 1: Build
+# --- STAGE 1: Build ---
 FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install openssl for Prisma
-RUN apt-get update && apt-get install -y openssl
+# Install system dependencies (openssl is required for Prisma)
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Copy package files
+# Install app dependencies
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install
-
-# Copy source code and prisma
+# Copy Prisma schema and generate client
 COPY prisma ./prisma
-COPY src ./src
-COPY tsconfig.json ./
-COPY nest-cli.json ./
-
-# Generate Prisma Client
 RUN npx prisma generate
 
-# Build the application
+# Copy source and build
+COPY . .
 RUN npm run build
 
-# Stage 2: Runtime
+# --- STAGE 2: Runtime ---
 FROM node:20-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y openssl
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
+# Copy built assets and production dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/src ./src
 
-# Expose API port
+# Metadata
 EXPOSE 3000
+ENV NODE_ENV=production
 
-# Default command (will be overridden by docker-compose)
+# The actual command is defined in docker-compose.yml
 CMD ["npm", "run", "start:prod:api"]

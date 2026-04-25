@@ -8,6 +8,75 @@ import { DiscordBotService } from '../../bot/discord-bot.service';
 export class ProgressionService {
   constructor(private readonly discordBot: DiscordBotService) {}
 
+  async createMinesCheck(targetFloor: number, days: number) {
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(startDate.getDate() + days);
+
+    const title = `Mines Season - Floor ${targetFloor}`;
+    const description = `Mines has started, you have ${days} days until it ends, try to reach ${targetFloor} floors!`;
+
+    const check = await this.createCheck({
+      title,
+      description,
+      startDate,
+      endDate,
+      requirements: [{ title: `Reached Floor ${targetFloor}`, targetValue: targetFloor.toString() }],
+    });
+
+    const announcementChannelId = process.env['ANNOUCEMENTS_DEVELOPER_ID'];
+    if (announcementChannelId) {
+      await this.discordBot.sendMessage(
+        announcementChannelId,
+        `🚀 **Mines has started!**\nYou have **${days} days** until it ends, try to reach **Floor ${targetFloor}**! Good luck! ✨`,
+      );
+    }
+
+    return check;
+  }
+
+  async editMinesCheck(newTargetFloor: number) {
+    // Find the latest active Mines check
+    const check = await prisma.progressionCheck.findFirst({
+      where: {
+        title: { contains: 'Mines Season' },
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { requirements: true },
+    });
+
+    if (!check) throw new NotFoundException('No active Mines check found to edit');
+
+    const oldTargetFloor = check.requirements[0]?.targetValue || '100';
+
+    await prisma.$transaction([
+      prisma.progressionCheck.update({
+        where: { id: check.id },
+        data: {
+          title: `Mines Season - Floor ${newTargetFloor}`,
+        },
+      }),
+      prisma.progressionRequirement.updateMany({
+        where: { progressionCheckId: check.id },
+        data: {
+          title: `Reached Floor ${newTargetFloor}`,
+          targetValue: newTargetFloor.toString(),
+        },
+      }),
+    ]);
+
+    const announcementChannelId = process.env['ANNOUCEMENTS_DEVELOPER_ID'];
+    if (announcementChannelId) {
+      await this.discordBot.sendMessage(
+        announcementChannelId,
+        `🔄 **Mines Update!**\nTarget floor has been changed from **${oldTargetFloor}** to **${newTargetFloor}**. 🎯`,
+      );
+    }
+
+    return true;
+  }
+
   async getAllChecks(status: 'active' | 'ended' | 'trash' = 'active') {
     const now = new Date();
 
@@ -64,7 +133,7 @@ export class ProgressionService {
       },
     });
 
-    if (!check) throw new NotFoundException('KhÃ´ng tÃ¬m tháº¥y Ä‘á»£t check');
+    if (!check) throw new NotFoundException('Progression check not found');
 
     // Filter requirement statuses to only those belonging to this check
     const requirementIds = check.requirements.map((r) => r.id);

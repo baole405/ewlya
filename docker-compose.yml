@@ -1,47 +1,96 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:15
+    image: postgres:16-alpine
     container_name: ewlya-db
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: ewlya
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ewlya}
     ports:
-      - "5432:5432"
+      - "8888:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ewlya-db-data:/var/lib/postgresql/data
+    networks:
+      - ewlya-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ewlya-api
-    restart: always
-    depends_on:
-      - db
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/ewlya?schema=public
-      - PORT=3000
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ewlya}?schema=public
     ports:
-      - "3000:3000"
-    command: npm run start:prod:api
+      - "3333:3000"
+    volumes:
+      # Map riêng lẻ để TRÁNH file .env lọt vào
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./nest-cli.json:/app/nest-cli.json
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ewlya-network
+    command: npm run start:dev:api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   bot:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ewlya-bot
-    restart: always
-    depends_on:
-      - db
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/ewlya?schema=public
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-    command: node dist/bot/main.js
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ewlya}?schema=public
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./nest-cli.json:/app/nest-cli.json
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ewlya-network
+    command: npm run start:dev:bot
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ewlya-network:
+    driver: bridge
 
 volumes:
-  postgres_data:
+  ewlya-db-data:
+    driver: local

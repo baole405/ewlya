@@ -12,6 +12,26 @@ import { CategoryKey, getOptionById, POINT_CONFIG } from '../services/point-calc
 export const name = Events.InteractionCreate;
 
 export async function execute(interaction: Interaction) {
+  // Handle Slash Commands
+  if (interaction.isChatInputCommand()) {
+    const client = interaction.client as any;
+    const command = client.commands?.get(interaction.commandName);
+
+    if (!command) return;
+
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      console.error(error);
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+      } else {
+        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+      }
+    }
+    return;
+  }
+
   if (!interaction.isStringSelectMenu()) return;
 
   // STEP 1: Category Selection
@@ -33,7 +53,7 @@ export async function execute(interaction: Interaction) {
 
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(subSelect);
 
-    await interaction.update({
+      await interaction.update({
       content: `Category selected: **${category.label}**. Now choose the specific result:`,
       embeds: [],
       components: [row],

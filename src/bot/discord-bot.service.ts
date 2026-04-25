@@ -10,9 +10,9 @@ import {
   User,
   PartialUser,
 } from 'discord.js';
-import { handleInteractionCreate } from './events/interaction-create.handler';
-import { handleMessageReactionAdd } from './events/message-reaction-add.handler';
-import { handleMessageCreate } from './events/message-create.handler';
+import * as interactionCreate from './events/interaction-create';
+import * as messageReactionAdd from './events/message-reaction-add';
+import * as messageCreate from './events/message-create';
 
 @Injectable()
 export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
@@ -64,10 +64,10 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('🚀 Bot is fully operational and ready for use.');
     });
 
-    // Interaction (select menus)
+    // Interaction (slash commands & select menus)
     this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       try {
-        await handleInteractionCreate(interaction);
+        await (interactionCreate as any).execute(interaction);
       } catch (err) {
         this.logger.error('❌ Error in InteractionCreate:', err);
       }
@@ -78,17 +78,17 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
       Events.MessageReactionAdd,
       async (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => {
         try {
-          await handleMessageReactionAdd(reaction, user);
+          await (messageReactionAdd as any).execute(reaction, user);
         } catch (err) {
           this.logger.error('❌ Error in MessageReactionAdd:', err);
         }
       },
     );
 
-    // Message (commands)
+    // Message (mentions & commands)
     this.client.on(Events.MessageCreate, async (message) => {
       try {
-        await handleMessageCreate(message);
+        await (messageCreate as any).execute(message);
       } catch (err) {
         this.logger.error('❌ Error in MessageCreate:', err);
       }
@@ -115,4 +115,3 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 }
-
