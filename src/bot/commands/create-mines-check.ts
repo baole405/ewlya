@@ -1,52 +1,47 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { prisma } from '../../database/prisma';
 
 export const data = new SlashCommandBuilder()
   .setName('create-mines-check')
   .setDescription('Start a new Mines Floor progression check (Admin Only)')
-  .addIntegerOption((option) =>
-    option
-      .setName('target_floor')
-      .setDescription('The floor number members need to reach')
+  .addStringOption(option => 
+    option.setName('season')
+      .setDescription('The name of the season (e.g., Spring 2024)')
       .setRequired(true)
-      .setMinValue(1),
   )
-  .addIntegerOption((option) =>
-    option
-      .setName('days')
-      .setDescription('Number of days until the deadline')
+  .addIntegerOption(option => 
+    option.setName('target_floor')
+      .setDescription('The floor level to reach (e.g., 100)')
       .setRequired(true)
-      .setMinValue(1),
+  )
+  .addIntegerOption(option => 
+    option.setName('days')
+      .setDescription('How many days until the check ends (e.g., 30)')
+      .setRequired(true)
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const targetFloor = interaction.options.getInteger('target_floor', true);
-  const days = interaction.options.getInteger('days', true);
-
-  // Check if user is in ADMIN_IDS
   const adminIds = (process.env['ADMIN_IDS'] || '').split(',');
   if (!adminIds.includes(interaction.user.id)) {
-    return interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+    return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
   }
+
+  const season = interaction.options.getString('season', true);
+  const targetFloor = interaction.options.getInteger('target_floor', true);
+  const days = interaction.options.getInteger('days', true);
 
   await interaction.deferReply({ ephemeral: true });
 
   try {
-    // BUSINESS RULE: Check if there is already an active Mines check
+    // BUSINESS RULE: Check for ANY non-deleted progression check
     const activeCheck = await prisma.progressionCheck.findFirst({
-      where: {
-        deletedAt: null,
-        OR: [
-          { endDate: null },
-          { endDate: { gt: new Date() } }
-        ]
-      }
+      where: { deletedAt: null }
     });
 
     if (activeCheck) {
       return interaction.editReply({
-        content: `❌ An active Mines check (**${activeCheck.title}**) is already in progress. Please wait for it to end or delete it before creating a new one.`
+        content: `❌ A Mines check (**${activeCheck.title}**) is already in the system. Please delete it using \`/delete-mines\` (ID: \`${activeCheck.id}\`) before creating a new one.`
       });
     }
 
@@ -54,85 +49,77 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const endDate = new Date();
     endDate.setDate(startDate.getDate() + days);
 
-    const title = `Mines Season - Floor ${targetFloor}`;
+    // Format dates for display: xx/Month (e.g., 25/April)
+    const formatDate = (date: Date) => {
+      const day = date.getDate();
+      const month = date.toLocaleString('en-US', { month: 'long' });
+      return `${day}/${month}`;
+    };
+
+    const title = `[${season}] Mines Floor ${targetFloor}`;
     const description = `Mines has started, you have ${days} days until it ends, try to reach ${targetFloor} floors!`;
 
     // 1. Create the Progression Check
+    const check = await prisma.progressionCheck.create({
+      data: {
+        title,
+        description,
+        startDate,
+        endDate,
+        requirements: {
+          create: {
+            title: `Reach Floor ${targetFloor}`,
+            description: `Required to reach floor ${targetFloor} within the time limit.`
+          }
+        }
+      },
+      include: {
+        requirements: true
+      }
+    });
+
+    // 2. Initialize status for all Official members
     const officialMembers = await prisma.member.findMany({
       where: { status: 'OFFICIAL' },
     });
 
-    const check = await prisma.$transaction(async (tx) => {
-      // Save title for suggestion
-      await tx.progressionTitle.upsert({
-        where: { title: title },
-        update: {},
-        create: { title: title },
+    if (officialMembers.length > 0) {
+      await prisma.memberProgressionStatus.createMany({
+        data: officialMembers.map((m) => ({
+          progressionCheckId: check.id,
+          memberId: m.id,
+          isCompleted: false,
+        })),
       });
 
-      // Create Check
-      const newCheck = await tx.progressionCheck.create({
-        data: {
-          title: title,
-          description: description,
-          startDate: startDate,
-          endDate: endDate,
-        },
-      });
-
-      // Create Requirements
-      const requirement = await tx.progressionRequirement.create({
-        data: {
-          progressionCheckId: newCheck.id,
-          title: `Reached Floor ${targetFloor}`,
-          targetValue: targetFloor.toString(),
-        },
-      });
-
-      // Create Statuses for each requirement per member
-      if (officialMembers.length > 0) {
-        await tx.memberRequirementStatus.createMany({
+      // Also create requirement statuses
+      for (const req of check.requirements) {
+        await prisma.memberRequirementStatus.createMany({
           data: officialMembers.map((m) => ({
+            requirementId: req.id,
             memberId: m.id,
-            requirementId: requirement.id,
             isMet: false,
           })),
         });
-
-        // Overall status
-        await tx.memberProgressionStatus.createMany({
-          data: officialMembers.map((m) => ({
-            progressionCheckId: newCheck.id,
-            memberId: m.id,
-            isCompleted: false,
-            note: '',
-          })),
-        });
-      }
-
-      return newCheck;
-    });
-
-    // 2. Announcement
-    const announcementChannelId = process.env['ANNOUCEMENTS_DEVELOPER_ID'];
-    if (announcementChannelId) {
-      try {
-        const channel = await interaction.client.channels.fetch(announcementChannelId);
-        if (channel?.isTextBased()) {
-          await (channel as any).send(
-            `🚀 **Mines has started!**\nYou have **${days} days** until it ends, try to reach **Floor ${targetFloor}**! Good luck! ✨`,
-          );
-        }
-      } catch (err) {
-        console.error('Failed to send announcement:', err);
       }
     }
 
-    await interaction.editReply({
-      content: `✅ Successfully created Mines Floor **${targetFloor}** check for **${days}** days!`,
-    });
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Mines Progression Created')
+      .setColor(0x22c55e)
+      .addFields(
+        { name: 'Season', value: season, inline: true },
+        { name: 'Target', value: `Floor ${targetFloor}`, inline: true },
+        { name: 'Duration', value: `${days} days`, inline: true },
+        { name: 'Start Date', value: `📅 **${formatDate(startDate)}**`, inline: true },
+        { name: 'End Date', value: `🏁 **${formatDate(endDate)}**`, inline: true },
+        { name: 'Members', value: `👥 ${officialMembers.length} official members added`, inline: false }
+      )
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    console.error('Error creating mines check:', error);
-    await interaction.editReply({ content: '❌ Failed to create Mines check. Please check the logs.' });
+    console.error(error);
+    await interaction.editReply('❌ Failed to create Mines check.');
   }
 }

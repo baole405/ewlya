@@ -19,6 +19,16 @@ export class FeatureMembersService {
   }
 
   /**
+   * Lấy danh sách thành viên Official
+   */
+  async getOfficialMembers() {
+    return prisma.member.findMany({
+      where: { status: 'OFFICIAL' },
+      orderBy: { nickname: 'asc' },
+    });
+  }
+
+  /**
    * Lấy chi tiết một thành viên và lịch sử điểm
    */
   async getMemberById(id: string) {

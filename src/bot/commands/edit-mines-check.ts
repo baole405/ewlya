@@ -1,84 +1,95 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { prisma } from '../../database/prisma';
 
 export const data = new SlashCommandBuilder()
   .setName('edit-mines-check')
-  .setDescription('Update the target floor for the latest active Mines check (Admin Only)')
-  .addIntegerOption((option) =>
-    option
-      .setName('new_target_floor')
-      .setDescription('The new floor number requirement')
+  .setDescription('Edit an existing Mines check (Admin Only)')
+  .addStringOption(option => 
+    option.setName('id')
+      .setDescription('The ID of the check to edit')
       .setRequired(true)
-      .setMinValue(1),
+  )
+  .addStringOption(option => 
+    option.setName('title')
+      .setDescription('New title for the check')
+      .setRequired(false)
+  )
+  .addIntegerOption(option => 
+    option.setName('add_days')
+      .setDescription('Add/subtract days from the current end date')
+      .setRequired(false)
+  )
+  .addStringOption(option => 
+    option.setName('status')
+      .setDescription('Set status (ACTIVE, POSTPONED, CLOSED)')
+      .setRequired(false)
+      .addChoices(
+        { name: 'Active', value: 'ACTIVE' },
+        { name: 'Postponed', value: 'POSTPONED' },
+        { name: 'Completed', value: 'COMPLETED' }
+      )
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const newTargetFloor = interaction.options.getInteger('new_target_floor', true);
-
-  // Check if user is in ADMIN_IDS
   const adminIds = (process.env['ADMIN_IDS'] || '').split(',');
   if (!adminIds.includes(interaction.user.id)) {
-    return interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
+    return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
   }
+
+  const id = interaction.options.getString('id', true);
+  const newTitle = interaction.options.getString('title');
+  const addDays = interaction.options.getInteger('add_days');
+  const newStatus = interaction.options.getString('status');
 
   await interaction.deferReply({ ephemeral: true });
 
   try {
-    // Find the latest active Mines check
-    const check = await prisma.progressionCheck.findFirst({
-      where: {
-        title: { contains: 'Mines Season' },
-        deletedAt: null,
-      },
-      orderBy: { createdAt: 'desc' },
-      include: { requirements: true },
-    });
+    const check = await prisma.progressionCheck.findUnique({ where: { id } });
+    if (!check) return interaction.editReply('❌ Check not found.');
 
-    if (!check) {
-      return interaction.editReply({ content: '❌ No active Mines check found to edit.' });
+    const updateData: any = {};
+    if (newTitle) updateData.title = newTitle;
+    if (newStatus) updateData.status = newStatus;
+    
+    if (addDays !== null && check.endDate) {
+      const newEndDate = new Date(check.endDate);
+      newEndDate.setDate(newEndDate.getDate() + (addDays || 0));
+      updateData.endDate = newEndDate;
     }
 
-    const oldTargetFloor = check.requirements[0]?.targetValue || '100';
-
-    await prisma.$transaction([
-      prisma.progressionCheck.update({
-        where: { id: check.id },
-        data: {
-          title: `Mines Season - Floor ${newTargetFloor}`,
-        },
-      }),
-      prisma.progressionRequirement.updateMany({
-        where: { progressionCheckId: check.id },
-        data: {
-          title: `Reached Floor ${newTargetFloor}`,
-          targetValue: newTargetFloor.toString(),
-        },
-      }),
-    ]);
-
-    // Announcement
-    const announcementChannelId = process.env['ANNOUCEMENTS_DEVELOPER_ID'];
-    if (announcementChannelId) {
-      try {
-        const channel = await interaction.client.channels.fetch(announcementChannelId);
-        if (channel?.isTextBased()) {
-          await (channel as any).send(
-            `🔄 **Mines Update!**\nTarget floor has been changed from **${oldTargetFloor}** to **${newTargetFloor}**. 🎯`,
-          );
-        }
-      } catch (err) {
-        console.error('Failed to send announcement:', err);
-      }
-    }
-
-    await interaction.editReply({
-      content: `✅ Successfully updated Mines target floor to **${newTargetFloor}**!`,
+    const updated = await (prisma.progressionCheck as any).update({
+      where: { id },
+      data: updateData
     });
+
+    const formatDate = (date: Date) => {
+      const day = date.getDate();
+      const month = date.toLocaleString('en-US', { month: 'long' });
+      return `${day}/${month}`;
+    };
+
+    const statusEmoji: Record<string, string> = {
+      'ACTIVE': '🟢',
+      'POSTPONED': '🟠',
+      'COMPLETED': '✅'
+    };
+
+    const currentStatus = updated.status || 'ACTIVE';
+
+    const embed = new EmbedBuilder()
+      .setTitle('📝 Mines Check Updated')
+      .setColor(0x38bdf8)
+      .addFields(
+        { name: 'Title', value: updated.title, inline: false },
+        { name: 'Status', value: `${statusEmoji[currentStatus] || ''} ${currentStatus}`, inline: true },
+        { name: 'End Date', value: updated.endDate ? `🏁 **${formatDate(updated.endDate)}**` : 'None', inline: true }
+      )
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    console.error('Error editing mines check:', error);
-    await interaction.editReply({ 
-      content: `❌ Failed to update Mines check: ${error instanceof Error ? error.message : 'Unknown error'}` 
-    });
+    console.error(error);
+    await interaction.editReply('❌ Failed to update Mines check.');
   }
 }

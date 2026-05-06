@@ -16,6 +16,12 @@ export class FeatureMembersController {
     return this.featureMembersService.getAllMembers();
   }
 
+  @Get('official')
+  @ApiOperation({ summary: 'Lấy danh sách thành viên Official' })
+  getOfficialMembers() {
+    return this.featureMembersService.getOfficialMembers();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Lấy chi tiết một thành viên' })
   getMemberById(@Param('id') id: string) {

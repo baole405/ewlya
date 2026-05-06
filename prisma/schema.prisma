@@ -47,6 +47,7 @@ model Member {
   country   String?
   aka       String?   // Biệt danh khác
   status    String    @default("OFFICIAL") // OFFICIAL, TRIAL, FORMER, BANNED
+  roles     String[]  @default([])         // Store role names or IDs
   
   submissions Submission[]
   progression   MemberProgressionStatus[]
@@ -93,6 +94,7 @@ model ProgressionCheck {
   description String?
   startDate   DateTime @default(now())
   endDate     DateTime?
+  status      String   @default("ACTIVE") // ACTIVE, POSTPONED, CLOSED
   deletedAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt DateTime @updatedAt
