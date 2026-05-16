@@ -94,6 +94,41 @@ export async function execute(interaction: Interaction) {
     if (customId.startsWith('announce_send_') || customId === 'sync_view_official') {
       return AnnouncementService.handleInteraction(interaction);
     }
+
+    if (customId === 'help_view_commands') {
+      const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+      const isAdmin = adminIds.includes(interaction.user.id);
+      
+      const embed = new EmbedBuilder()
+        .setTitle(isAdmin ? '🛠️ Admin Commands' : '📘 Member Commands')
+        .setColor(isAdmin ? 0xf43f5e : 0x38bdf8)
+        .setTimestamp();
+        
+      if (isAdmin) {
+        embed.setDescription('Here are the commands available to Administrators:\n\n' +
+          '**`/wizard`** - Start the Point Wizard to award points manually via a message link.\n' +
+          '**`/season`** - Manage point seasons (Start/Stop seasons).\n' +
+          '**`/create-check`** - Create a new Progression Check (e.g., Weekly Raids).\n' +
+          '**`/edit-check`** - Edit an existing Progression Check.\n' +
+          '**`/delete-check`** - Delete a Progression Check.\n' +
+          '**`/list-checks`** - View all active checks or details of a specific check.\n' +
+          '**`/postpone-check`** - Mark a member as postponed for a check.\n' +
+          '**`/scan-hof`** - Scan the Hall of Fame channel to bulk award points.\n' +
+          '**`/sync-members`** - Sync the member database with current server roles.\n' +
+          '**`/draft-announcement`** - Create an announcement draft.\n' +
+          '**`/setup-help-panel`** - Deploy the help panel to a channel.\n' +
+          '**Right-Click > Apps > Award Points** - Quick way to award points to an image.'
+        );
+      } else {
+        embed.setDescription('Here are the commands available to you:\n\n' +
+          '**`/progression-now`** - Check your current season points and leaderboard standing.\n' +
+          '**`/check-status`** - Check your status for active progression checks (e.g., Weekly Raids).\n' +
+          '**`/list-members`** - View the member roster.'
+        );
+      }
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
   }
 
   // 3. Handle Select Menu Interactions
