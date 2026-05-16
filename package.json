@@ -14,6 +14,7 @@
     "start:prod:api": "node dist/main",
     "start:prod:bot": "node dist/bot/main",
     "start:prod:combined": "node dist/combined/main",
+    "start:dev:combined": "nest start --entryFile combined/main --watch",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
