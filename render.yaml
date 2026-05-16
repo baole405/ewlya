@@ -1,22 +1,12 @@
 services:
-  # === DISCORD BOT (Background Worker - Always ON 24/7) ===
-  - type: worker
-    name: ewlya-bot
-    runtime: node
-    region: singapore
-    plan: free
-    buildCommand: npm ci && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && npm run start:prod:bot
-    # Environment variables are managed by Doppler integration
-    # Doppler auto-syncs all secrets to this service
-
-  # === NESTJS API (Web Service) ===
+  # === COMBINED: API + Bot in one Web Service (FREE tier) ===
   - type: web
-    name: ewlya-api
+    name: ewlya
     runtime: node
     region: singapore
     plan: free
     buildCommand: npm ci && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && npm run start:prod:api
+    startCommand: npx prisma migrate deploy && npm run start:prod:combined
+    healthCheckPath: /health
     # Environment variables are managed by Doppler integration
     # Doppler auto-syncs all secrets to this service
