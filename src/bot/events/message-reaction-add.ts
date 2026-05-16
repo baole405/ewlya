@@ -75,7 +75,7 @@ export async function execute(
         embed.setThumbnail(firstAttachment.url);
       }
 
-      const sentMessage = await message.channel.send({
+      const sentMessage = await (message.channel as any).send({
         content: `<@${user.id}>`,
         embeds: [embed],
         components: [row]
