@@ -8,8 +8,8 @@ import { LoggerService } from '../services/logger.service';
 export const name = Events.InteractionCreate;
 
 export async function execute(interaction: Interaction) {
-  // Always attempt auto-registration for the interactor
-  await MemberService.autoRegister(interaction);
+  // Always attempt auto-registration for the interactor (Fire and forget to avoid 3s timeout)
+  MemberService.autoRegister(interaction).catch(console.error);
 
   // 1. Handle Commands (Slash & Context Menu)
   if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
@@ -18,8 +18,8 @@ export async function execute(interaction: Interaction) {
 
     if (!command) return;
 
-    // AUDIT LOG
-    await LoggerService.logAction(
+    // AUDIT LOG (Fire and forget)
+    LoggerService.logAction(
       interaction.client,
       '⚙️ Command Executed',
       `User **${interaction.user.username}** used \`/${interaction.commandName}\``,
@@ -28,7 +28,7 @@ export async function execute(interaction: Interaction) {
         name: opt.name,
         value: String(opt.value)
       }))
-    );
+    ).catch(console.error);
 
     try {
       await command.execute(interaction);
