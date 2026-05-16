@@ -57,6 +57,16 @@ export class PointService {
       [{ name: 'Reason', value: reason }]
     );
 
+    // Points tracking log
+    await LoggerService.logPoints(client, {
+      memberNickname: member.nickname,
+      memberDiscordId: member.discordId || undefined,
+      missionText: missionText,
+      points: points,
+      seasonName: targetSeason.name,
+      adminUsername: adminUsername
+    }).catch((err) => console.error('Failed to log points:', err));
+
     return { member, activeSeason: targetSeason };
   }
 

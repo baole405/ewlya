@@ -2,16 +2,26 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 import { prisma } from '../../database/prisma';
 
 export const data = new SlashCommandBuilder()
-  .setName('create-mines-check')
-  .setDescription('Start a new Mines Floor progression check (Admin Only)')
+  .setName('create-check')
+  .setDescription('Start a new Progression Check (Mines/Raids) (Admin Only)')
   .addStringOption(option => 
     option.setName('season')
       .setDescription('The name of the season (e.g., Spring 2024)')
       .setRequired(true)
   )
+  .addStringOption(option => 
+    option.setName('type')
+      .setDescription('Type of progression (e.g., Mines Floor, Raids Count)')
+      .setRequired(true)
+      .addChoices(
+        { name: 'Mines Floor', value: 'Mines Floor' },
+        { name: 'Raids Count', value: 'Raids Count' },
+        { name: 'Other', value: 'Progression' }
+      )
+  )
   .addIntegerOption(option => 
-    option.setName('target_floor')
-      .setDescription('The floor level to reach (e.g., 100)')
+    option.setName('target_value')
+      .setDescription('The target number to reach (e.g., 100)')
       .setRequired(true)
   )
   .addIntegerOption(option => 
@@ -28,20 +38,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   const season = interaction.options.getString('season', true);
-  const targetFloor = interaction.options.getInteger('target_floor', true);
+  const type = interaction.options.getString('type', true);
+  const targetValue = interaction.options.getInteger('target_value', true);
   const days = interaction.options.getInteger('days', true);
 
   await interaction.deferReply({ ephemeral: true });
 
   try {
-    // BUSINESS RULE: Check for ANY non-deleted progression check
+    // BUSINESS RULE: Check for ANY non-deleted ACTIVE progression check
     const activeCheck = await prisma.progressionCheck.findFirst({
-      where: { deletedAt: null }
+      where: { deletedAt: null, status: 'ACTIVE' }
     });
 
     if (activeCheck) {
       return interaction.editReply({
-        content: `❌ A Mines check (**${activeCheck.title}**) is already in the system. Please delete it using \`/delete-mines\` (ID: \`${activeCheck.id}\`) before creating a new one.`
+        content: `❌ An **ACTIVE** progression check (**${activeCheck.title}**) is already running. Please postpone or close it using \`/edit-check\` (ID: \`${activeCheck.id}\`) before starting a new one.`
       });
     }
 
@@ -49,15 +60,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const endDate = new Date();
     endDate.setDate(startDate.getDate() + days);
 
-    // Format dates for display: xx/Month (e.g., 25/April)
     const formatDate = (date: Date) => {
       const day = date.getDate();
       const month = date.toLocaleString('en-US', { month: 'long' });
       return `${day}/${month}`;
     };
 
-    const title = `[${season}] Mines Floor ${targetFloor}`;
-    const description = `Mines has started, you have ${days} days until it ends, try to reach ${targetFloor} floors!`;
+    const title = `[${season}] ${type} ${targetValue}`;
+    const description = `${type} has started, you have ${days} days until it ends, try to reach the target of ${targetValue}!`;
 
     // 1. Create the Progression Check
     const check = await prisma.progressionCheck.create({
@@ -66,10 +76,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         description,
         startDate,
         endDate,
+        status: 'ACTIVE',
         requirements: {
           create: {
-            title: `Reach Floor ${targetFloor}`,
-            description: `Required to reach floor ${targetFloor} within the time limit.`
+            title: `Reach ${targetValue}`,
+            description: `Required to reach ${targetValue} within the time limit.`
           }
         }
       },
@@ -105,11 +116,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
 
     const embed = new EmbedBuilder()
-      .setTitle('✅ Mines Progression Created')
+      .setTitle('✅ Progression Check Created')
       .setColor(0x22c55e)
       .addFields(
         { name: 'Season', value: season, inline: true },
-        { name: 'Target', value: `Floor ${targetFloor}`, inline: true },
+        { name: 'Target', value: `${type} ${targetValue}`, inline: true },
         { name: 'Duration', value: `${days} days`, inline: true },
         { name: 'Start Date', value: `📅 **${formatDate(startDate)}**`, inline: true },
         { name: 'End Date', value: `🏁 **${formatDate(endDate)}**`, inline: true },
@@ -120,6 +131,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
     console.error(error);
-    await interaction.editReply('❌ Failed to create Mines check.');
+    await interaction.editReply('❌ Failed to create progression check.');
   }
 }

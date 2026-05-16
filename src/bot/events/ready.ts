@@ -39,7 +39,7 @@ export async function execute(client: Client) {
         const channel = await client.channels.fetch(adminAnnounceId);
         if (channel && channel.isTextBased()) {
           // Send the reminder
-          await channel.send(
+          await (channel as any).send(
             `⚠️ **Attention Admins!**\nThe month is ending soon! Please remember to run \`/season close\` in the next few days to tally all points, post the final leaderboard to the Hall of Fame, and close out the month.`
           );
           console.log('[CRON] Sent end-of-month reminder to admins.');

@@ -1,4 +1,4 @@
-import { MessageReaction, User, PartialMessageReaction, PartialUser, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { MessageReaction, User, PartialMessageReaction, PartialUser, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { prisma } from '../../database/prisma';
 import { LoggerService } from '../services/logger.service';
 
@@ -12,15 +12,102 @@ export async function execute(
     try { await reaction.fetch(); } catch (error) { return; }
   }
 
+  const message = reaction.message;
+  const author = message.author;
+
+  // ---------------------------------------------------------
+  // 0. HOF CHANNEL ✅ GUARD — Remove non-bot ✅ reactions
+  // ---------------------------------------------------------
+  const hofChannelId = process.env['HOF_CHANNEL_ID'];
+  const testChannelId = process.env['TEST_CHANNEL_ID'];
+  const isHofChannel = message.channelId === hofChannelId || message.channelId === testChannelId;
+
+  if (
+    isHofChannel &&
+    reaction.emoji.name === '✅' &&
+    !user.bot &&
+    user.id !== reaction.client.user?.id
+  ) {
+    // This is a human reacting ✅ in HOF — remove it immediately
+    await reaction.users.remove(user.id).catch(() => {});
+    return;
+  }
+
   const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
   if (!adminIds.includes(user.id)) return;
 
-  const message = reaction.message;
-  const author = message.author;
   if (!author || author.bot) return;
 
   // ---------------------------------------------------------
-  // 1. PROGRESSION VERIFICATION (✅)
+  // 1. PROGRESSION VERIFICATION (🧮)
+  // ---------------------------------------------------------
+  if (reaction.emoji.name === '🧮') {
+    const devChannelId = process.env['PROGRESSION_CHECK_ID_DEVELOPER'];
+    const officialChannelId = process.env['PROGRESSION_CHECK_ID'];
+    
+    // Only allow in designated channels
+    if (message.channelId !== devChannelId && message.channelId !== officialChannelId) return;
+
+    try {
+      const member = await prisma.member.findUnique({ where: { discordId: author.id } });
+      if (!member) return;
+
+      const activeCheck = await prisma.progressionCheck.findFirst({
+        where: { deletedAt: null, status: 'ACTIVE' },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (!activeCheck) return;
+
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`prog_input_${member.id}_${activeCheck.id}_${message.id}`)
+          .setLabel(`📝 Enter Boss Kills/Floors for ${member.nickname}`)
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      const embed = new EmbedBuilder()
+        .setTitle('📊 Progression Verification Input')
+        .setDescription(`Admin **${user.username}** reacted with 🧮 to verify progress for **${member.nickname}**.\n\nPlease click the button below to enter the actual Boss Kills or Floors achieved.`)
+        .setColor(0x8b5cf6);
+
+      const firstAttachment = message.attachments.first();
+      if (firstAttachment && firstAttachment.contentType?.startsWith('image/')) {
+        embed.setThumbnail(firstAttachment.url);
+      }
+
+      const sentMessage = await message.channel.send({
+        content: `<@${user.id}>`,
+        embeds: [embed],
+        components: [row]
+      });
+
+      // Auto-expiry timeout (1 minute) if no interaction occurs
+      setTimeout(async () => {
+        try {
+          // 1. Delete the temporary button message
+          await sentMessage.delete().catch(() => {});
+
+          // 2. Fetch the fresh original message and remove the admin's 🧮 reaction
+          const freshMessage = await message.channel.messages.fetch(message.id).catch(() => null);
+          if (freshMessage) {
+            const abacusReaction = freshMessage.reactions.cache.find(r => r.emoji.name === '🧮');
+            if (abacusReaction) {
+              await abacusReaction.users.remove(user.id).catch(() => {});
+            }
+          }
+        } catch (err) {
+          // Safe ignore if already deleted or cleaned up
+        }
+      }, 60000);
+
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 2. QUICK DIRECT VERIFICATION (✅)
   // ---------------------------------------------------------
   if (reaction.emoji.name === '✅') {
     const devChannelId = process.env['PROGRESSION_CHECK_ID_DEVELOPER'];
@@ -34,22 +121,29 @@ export async function execute(
       if (!member) return;
 
       const activeCheck = await prisma.progressionCheck.findFirst({
-        where: { deletedAt: null },
+        where: { deletedAt: null, status: 'ACTIVE' },
         orderBy: { createdAt: 'desc' }
       });
       if (!activeCheck) return;
 
-      const status = await prisma.memberProgressionStatus.update({
+      const status = await prisma.memberProgressionStatus.upsert({
         where: {
           progressionCheckId_memberId: {
             progressionCheckId: activeCheck.id,
             memberId: member.id
           }
         },
-        data: {
+        update: {
           isCompleted: true,
           completedAt: new Date(),
-          note: `Verified by ${user.username} via reaction`
+          note: 'Verified'
+        },
+        create: {
+          progressionCheckId: activeCheck.id,
+          memberId: member.id,
+          isCompleted: true,
+          completedAt: new Date(),
+          note: 'Verified'
         }
       });
 
@@ -67,7 +161,7 @@ export async function execute(
         
         if (channel && channel.isTextBased()) {
           const timestamp = new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'medium', timeStyle: 'short' });
-          await channel.send(`🔔 <@${member.discordId}>, you've successfully completed the progression check of **${activeCheck.title}**!\n⏰ *Verified at: ${timestamp} (GMT+7)*`);
+          await (channel as any).send(`🔔 **${member.nickname}**, you've successfully completed the progression check of **${activeCheck.title}**!\n⏰ *Verified at: ${timestamp} (GMT+7)*`);
         }
       }
     } catch (error) {

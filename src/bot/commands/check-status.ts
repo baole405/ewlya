@@ -2,8 +2,8 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 import { prisma } from '../../database/prisma';
 
 export const data = new SlashCommandBuilder()
-  .setName('mines-checks-status')
-  .setDescription('View all Mines checks categorized by status (Admin Only)')
+  .setName('check-status')
+  .setDescription('View all progression checks categorized by status (Admin Only)')
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -33,7 +33,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     };
 
     const embed = new EmbedBuilder()
-      .setTitle('📊 Mines System Overview')
+      .setTitle('📊 Progression System Overview')
       .setColor(0x38bdf8)
       .setTimestamp();
 

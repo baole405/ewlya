@@ -16,7 +16,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   try {
     const activeCheck = await prisma.progressionCheck.findFirst({
-      where: { deletedAt: null },
+      where: { deletedAt: null, status: 'ACTIVE' },
       include: {
         memberStatuses: {
           include: { member: true }
@@ -29,8 +29,27 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return interaction.editReply('📭 No active progression check found.');
     }
 
-    const completed = activeCheck.memberStatuses.filter(s => s.isCompleted);
-    const pending = activeCheck.memberStatuses.filter(s => !s.isCompleted);
+    const allMembers = await prisma.member.findMany({
+      where: { status: 'OFFICIAL' }
+    });
+    const existingStatusMap = new Map(activeCheck.memberStatuses.map(s => [s.memberId, s]));
+
+    const completed: any[] = [];
+    const notCompleted: any[] = [];
+    const pending: any[] = [];
+
+    for (const m of allMembers) {
+      const s = existingStatusMap.get(m.id);
+      if (!s) {
+        pending.push({ member: m, note: null });
+      } else if (s.isCompleted) {
+        completed.push(s);
+      } else if (s.note !== null) {
+        notCompleted.push(s);
+      } else {
+        pending.push(s);
+      }
+    }
 
     const statusEmoji: Record<string, string> = {
       'ACTIVE': '🟢',
@@ -44,6 +63,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return `${day}/${month}`;
     };
 
+    const formatMemberLine = (s: any) => {
+      if (s.note && !s.note.startsWith('Verified by') && !s.note.includes('via reaction')) {
+        return `• ${s.member.nickname} (${s.note})`;
+      }
+      return `• ${s.member.nickname}`;
+    };
+
     const embed = new EmbedBuilder()
       .setTitle(`${statusEmoji[activeCheck.status] || '📊'} Status: ${activeCheck.title}`)
       .setDescription(`Deadline: **${formatDate(activeCheck.endDate!)}** (<t:${Math.floor(activeCheck.endDate!.getTime() / 1000)}:F>)`)
@@ -51,12 +77,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .addFields(
         { 
           name: `✅ Completed (${completed.length})`, 
-          value: completed.length > 0 ? completed.map(s => `• ${s.member.nickname}`).join('\n') : 'None yet',
+          value: completed.length > 0 ? completed.map(formatMemberLine).join('\n') : 'None yet',
+          inline: true 
+        },
+        { 
+          name: `❌ Not Complete (${notCompleted.length})`, 
+          value: notCompleted.length > 0 ? notCompleted.map(formatMemberLine).join('\n') : 'None',
           inline: true 
         },
         { 
           name: `⏳ Pending (${pending.length})`, 
-          value: pending.length > 0 ? pending.map(s => `• ${s.member.nickname}`).join('\n') : 'Everyone is done!',
+          value: pending.length > 0 ? pending.map(formatMemberLine).join('\n') : 'None',
           inline: true 
         }
       )

@@ -31,4 +31,62 @@ export class LoggerService {
       console.error('❌ Failed to send log to Discord:', error);
     }
   }
+
+  static async logPoints(
+    client: Client,
+    options: {
+      memberNickname: string;
+      memberDiscordId?: string;
+      missionText: string;
+      points: number;
+      seasonName: string;
+      adminUsername: string;
+    }
+  ) {
+    const logChannelId = process.env['LOG_OF_LB_POINTS_ID'];
+    if (!logChannelId) {
+      console.warn('⚠️ LOG_OF_LB_POINTS_ID is not set in .env');
+      return;
+    }
+
+    try {
+      const channel = await client.channels.fetch(logChannelId) as TextChannel;
+      if (!channel) {
+        console.warn(`⚠️ Could not find log of lb points channel with ID: ${logChannelId}`);
+        return;
+      }
+
+      let avatarURL: string | null = null;
+      if (options.memberDiscordId) {
+        try {
+          const user = await client.users.fetch(options.memberDiscordId);
+          avatarURL = user.displayAvatarURL({ size: 128 });
+        } catch {}
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('📊 Point Log Entry')
+        .setColor(0x8b5cf6) // Purple color matching Image 1
+        .addFields(
+          { name: 'Member', value: options.memberNickname, inline: true },
+          { name: 'Mission/Stage', value: options.missionText, inline: true },
+          { name: 'Points', value: `+${options.points}`, inline: true },
+          { name: 'Season', value: options.seasonName, inline: false }
+        );
+
+      if (avatarURL) {
+        embed.setAuthor({ name: options.memberNickname, iconURL: avatarURL });
+      } else {
+        embed.setAuthor({ name: options.memberNickname });
+      }
+
+      const now = new Date();
+      const formattedDate = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`;
+      embed.setFooter({ text: `Verified by ${options.adminUsername} • ${formattedDate}` });
+
+      await channel.send({ embeds: [embed] });
+    } catch (error) {
+      console.error('❌ Failed to send points log to Discord:', error);
+    }
+  }
 }

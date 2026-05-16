@@ -32,6 +32,11 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
+    if (process.env['DISABLE_BOT_CLIENT'] === 'true') {
+      this.logger.log('🚫 Bot Client is disabled in this container (DISABLE_BOT_CLIENT=true). API-only mode.');
+      return;
+    }
+
     const token = process.env['DISCORD_TOKEN'];
     if (!token) {
       this.logger.warn('⚠️ DISCORD_TOKEN not found — Bot will NOT start. API-only mode.');

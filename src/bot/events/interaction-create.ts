@@ -1,4 +1,5 @@
-import { Events, Interaction } from 'discord.js';
+import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder } from 'discord.js';
+import { prisma } from '../../database/prisma';
 import { MemberService } from '../services/member.service';
 import { PointWizardService } from '../services/point-wizard.service';
 import { AnnouncementService } from '../services/announcement.service';
@@ -43,6 +44,30 @@ export async function execute(interaction: Interaction) {
   // 2. Handle Button Interactions
   if (interaction.isButton()) {
     const { customId } = interaction;
+
+    if (customId.startsWith('prog_input_')) {
+      const parts = customId.split('_');
+      const memberId = parts[2];
+      const checkId = parts[3];
+      const originalMessageId = parts[4];
+
+      const modal = new ModalBuilder()
+        .setCustomId(`prog_modal_${memberId}_${checkId}_${originalMessageId}`)
+        .setTitle('Enter Progression Value');
+
+      const killsInput = new TextInputBuilder()
+        .setCustomId('kills_input')
+        .setLabel('Boss Kills / Floors Achieved')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., 85 or 100')
+        .setRequired(true);
+
+      const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(killsInput);
+      modal.addComponents(actionRow);
+
+      await interaction.showModal(modal);
+      return;
+    }
 
     if (customId.startsWith('calc_cat_')) {
       return PointWizardService.handleCategorySelection(interaction);
@@ -99,5 +124,98 @@ export async function execute(interaction: Interaction) {
       console.error('❌ Autocomplete Error:', error);
     }
     return;
+  }
+
+  // 5. Handle Modal Submissions
+  if (interaction.isModalSubmit()) {
+    const { customId } = interaction;
+
+    if (customId.startsWith('prog_modal_')) {
+      const parts = customId.split('_');
+      const memberId = parts[2];
+      const checkId = parts[3];
+      const originalMessageId = parts[4];
+      const valueStr = interaction.fields.getTextInputValue('kills_input');
+      const value = parseInt(valueStr, 10);
+
+      if (isNaN(value)) {
+        return interaction.reply({ content: '❌ Please enter a valid number!', ephemeral: true });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        const check = await prisma.progressionCheck.findUnique({ where: { id: checkId } });
+        const member = await prisma.member.findUnique({ where: { id: memberId } });
+
+        if (!check || !member) {
+          return interaction.editReply('❌ Check or Member info not found.');
+        }
+
+        // Fetch target value from ProgressionRequirement
+        const requirement = await prisma.progressionRequirement.findFirst({
+          where: { progressionCheckId: check.id }
+        });
+        let targetValue = 100;
+        if (requirement) {
+          const match = requirement.title.match(/\d+/);
+          if (match) targetValue = parseInt(match[0], 10);
+        }
+
+        const isCompleted = value >= targetValue;
+
+        await prisma.memberProgressionStatus.upsert({
+          where: {
+            progressionCheckId_memberId: {
+              progressionCheckId: check.id,
+              memberId: member.id
+            }
+          },
+          update: {
+            isCompleted,
+            completedAt: isCompleted ? new Date() : null,
+            note: `Kills: ${value}`
+          },
+          create: {
+            progressionCheckId: check.id,
+            memberId: member.id,
+            isCompleted,
+            completedAt: isCompleted ? new Date() : null,
+            note: `Kills: ${value}`
+          }
+        });
+
+        // 1. Delete the temporary button message
+        if (interaction.message) {
+          await interaction.message.delete().catch(() => {});
+        }
+
+        // 2. Fetch original message to remove 🧮 and react with ✅
+        if (interaction.channel && originalMessageId) {
+          const originalMessage = await interaction.channel.messages.fetch(originalMessageId).catch(() => null);
+          if (originalMessage) {
+            const abacusReaction = originalMessage.reactions.cache.find(r => r.emoji.name === '🧮');
+            if (abacusReaction) {
+              await abacusReaction.users.remove(interaction.user.id).catch(() => {});
+            }
+            await originalMessage.react('✅').catch(() => {});
+          }
+        }
+
+        await LoggerService.logAction(
+          interaction.client,
+          '✅ Progression Verified',
+          `Admin **${interaction.user.username}** updated Raid progress for **${member.nickname}** to **${value}/${targetValue}** via reaction modal.`,
+          isCompleted ? 0x22c55e : 0xef4444,
+          [{ name: 'Check', value: check.title }]
+        );
+
+        await interaction.editReply(`✅ Successfully updated progress for **${member.nickname}**!\n📊 Progress: **${value}/${targetValue}** | Status: **${isCompleted ? 'Completed' : 'Not Complete'}**`);
+      } catch (err) {
+        console.error(err);
+        await interaction.editReply('❌ An error occurred while updating progress.');
+      }
+      return;
+    }
   }
 }

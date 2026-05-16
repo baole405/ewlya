@@ -44,6 +44,7 @@ export const data = new SlashCommandBuilder()
                 opt.setName('new_name')
                    .setDescription('The new name for the season')
                    .setRequired(true)
+                   .setAutocomplete(true)
               )
          )
   )
@@ -129,6 +130,20 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
     await interaction.respond(
       closedSeasons.map(s => ({ name: s.name, value: s.id }))
     );
+  } else if (focusedOption.name === 'new_name') {
+    const targetSeasonId = interaction.options.getString('target_season');
+    if (targetSeasonId) {
+      const season = await prisma.season.findUnique({
+        where: { id: targetSeasonId }
+      });
+      if (season) {
+        await interaction.respond([
+          { name: `Current: ${season.name}`, value: season.name }
+        ]);
+        return;
+      }
+    }
+    await interaction.respond([]);
   }
 }
 

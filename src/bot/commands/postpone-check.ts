@@ -2,17 +2,12 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, 
 import { prisma } from '../../database/prisma';
 
 export const data = new SlashCommandBuilder()
-  .setName('postpone-mines')
-  .setDescription('Postpone an active Mines check (Admin Only)')
-  .addStringOption(option => 
-    option.setName('id')
-      .setDescription('The ID of the check to postpone')
-      .setRequired(true)
-  )
+  .setName('postpone-check')
+  .setDescription('Postpone the active progression check (Admin Only)')
   .addStringOption(option => 
     option.setName('reason')
       .setDescription('Reason for postponement (e.g., Game Patch)')
-      .setRequired(false)
+      .setRequired(true)
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.Administrator);
 
@@ -22,22 +17,26 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
   }
 
-  const id = interaction.options.getString('id', true);
-  const reason = interaction.options.getString('reason') || 'No reason provided';
+  const reason = interaction.options.getString('reason', true);
 
   await interaction.deferReply({ ephemeral: true });
 
   try {
-    const check = await prisma.progressionCheck.findUnique({ where: { id } });
-    if (!check) return interaction.editReply('❌ Check not found.');
+    const check = await prisma.progressionCheck.findFirst({
+      where: { deletedAt: null, status: 'ACTIVE' }
+    });
+
+    if (!check) {
+      return interaction.editReply('❌ No active progression check found to postpone.');
+    }
 
     const updated = await (prisma.progressionCheck as any).update({
-      where: { id },
+      where: { id: check.id },
       data: { status: 'POSTPONED' }
     });
 
     const embed = new EmbedBuilder()
-      .setTitle('🟠 Mines Check Postponed')
+      .setTitle('🟠 Progression Check Postponed')
       .setColor(0xf97316)
       .setDescription(`The progression check **${updated.title}** has been postponed.`)
       .addFields(

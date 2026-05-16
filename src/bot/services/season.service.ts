@@ -310,7 +310,7 @@ export class SeasonService {
       }
 
       await interaction.editReply(
-        `✅ Successfully closed **${activeSeason.name}**!${postedToHOF ? ` Results posted to <#${testChannelId}>.` : ' (Could not find TEST_CHANNEL_ID to post results).'} Reminder sent to admins.`,
+        `✅ Successfully closed **${activeSeason.name}**!${postedToHOF ? ` Results posted to <#${targetChannelId}>.` : ' (Could not find TEST_CHANNEL_ID to post results).'} Reminder sent to admins.`,
       );
 
       await LoggerService.logAction(

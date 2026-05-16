@@ -136,7 +136,7 @@ export class PointWizardService {
     const stageConfig = POINT_CONFIG[stageKey];
 
     const menu = new StringSelectMenuBuilder()
-      .setCustomId(`calc_final_ldb_${targetMemberId}_${messageId}`)
+      .setCustomId(`calc_final_ldb_${stageKey}_${targetMemberId}_${messageId}`)
       .setPlaceholder(`Select Rank for ${stageConfig.label}`)
       .addOptions(
         stageConfig.options.map((opt) =>
@@ -201,6 +201,10 @@ export class PointWizardService {
     } else if (interaction.isStringSelectMenu()) {
       const stageKey = parts.slice(3).join('_');
       const rankId = interaction.values[0];
+
+      if (!stageKey || !(stageKey in POINT_CONFIG)) {
+        return interaction.editReply({ content: '❌ Invalid or expired interaction. Please use the command again to start a new Point Wizard.', components: [] });
+      }
 
       const option = getOptionById(stageKey as CategoryKey, rankId);
       pointsToAdd = option?.points || 0;
@@ -305,6 +309,17 @@ export class PointWizardService {
         prisma.member.update({ where: { id: member.id }, data: { points: { increment: total } } }),
         prisma.submission.createMany({ data: subs as any }),
       ]);
+
+      for (const item of cartItems) {
+        await LoggerService.logPoints(interaction.client, {
+          memberNickname: member.nickname,
+          memberDiscordId: member.discordId || undefined,
+          missionText: item.mission,
+          points: item.points,
+          seasonName: targetSeason.name,
+          adminUsername: interaction.user.username
+        }).catch((err) => console.error('Failed to log point wizard item:', err));
+      }
 
       await interaction.editReply({ content: `✅ Awarded **${total} points** to **${member.nickname}**.\n*(Auto-delete in 1 min)*`, components: [] });
       setTimeout(() => interaction.deleteReply().catch(() => null), 60000);
