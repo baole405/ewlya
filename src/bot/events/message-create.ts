@@ -112,8 +112,26 @@ export async function execute(message: Message) {
       // Also filter out the current question message itself
       const filteredContext = contextMessages.filter(msg => !msg.author.bot && msg.id !== message.id);
 
-      // Call AI Service
-      const { answer, tokens, durationMs } = await AISummaryService.answerQuestion(filteredContext, question);
+      // MOCK TEST COMMANDS BYPASS
+      let answer = '';
+      let tokens = 0;
+      let durationMs = 0;
+
+      if (question.startsWith('mock-503')) {
+        throw new Error('GoogleGenerativeAIFetchError: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent: [503 Service Unavailable]');
+      } else if (question.startsWith('mock-429')) {
+        throw new Error('GoogleGenerativeAIFetchError: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent: [429 Quota Exceeded]');
+      } else if (question.startsWith('mock-success ')) {
+        answer = `[MOCK] ${question.replace('mock-success ', '')}`;
+        tokens = 120;
+        durationMs = 350;
+      } else {
+        // Call AI Service
+        const aiResponse = await AISummaryService.answerQuestion(filteredContext, question);
+        answer = aiResponse.answer;
+        tokens = aiResponse.tokens;
+        durationMs = aiResponse.durationMs;
+      }
       
       // Background Log
       LoggerService.logAction(
