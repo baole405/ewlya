@@ -147,3 +147,18 @@ model MemberRequirementStatus {
   @@unique([requirementId, memberId])
 }
 
+model AiSummary {
+  id           String   @id @default(cuid())
+  channelId    String
+  channelName  String?
+  guildId      String?
+  messageCount Int
+  hoursScanned Int?     // null = dùng limit mode
+  limitUsed    Int?     // null = dùng hours mode
+  summary      String   @db.Text
+  requestedBy  String   // Discord ID của người gọi command
+  requesterTag String?  // username#tag để dễ đọc
+  model        String   @default("gemini-1.5-flash")
+  createdAt    DateTime @default(now())
+}
+

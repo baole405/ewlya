@@ -1,5 +1,7 @@
-import { Message, Client, Events } from 'discord.js';
+import { Message, Client, Events, TextChannel } from 'discord.js';
 import { prisma } from '../../database/prisma';
+import { AISummaryService } from '../services/ai-summary.service';
+import { LoggerService } from '../services/logger.service';
 
 /**
  * Handle Message Create Event
@@ -16,9 +18,12 @@ export async function execute(message: Message) {
   const client = message.client as Client;
   const botId = client.user?.id;
 
-  // Check if bot was mentioned
-  if (botId && message.mentions.has(botId)) {
-    console.log(`🤖 Bot mentioned by ${message.author.username}`);
+  // Check if bot was explicitly mentioned in the text (not just an implicit reply ping) or "hey liza" is present
+  const isExplicitlyMentioned = botId ? new RegExp(`<@!?${botId}>`).test(message.content) : false;
+  const hasKeyword = content.includes('hey liza');
+
+  if (isExplicitlyMentioned || hasKeyword) {
+    console.log(`🤖 Bot triggered by ${message.author.username}`);
 
     // Query Member info: IGN
     if (content.includes('ign')) {
@@ -59,9 +64,84 @@ export async function execute(message: Message) {
       }
     }
 
-    // Default friendly response
-    return message.reply(
-      `Hello **${message.author.username}**! You can ask me about 'ign', 'gs code', or 'points' by mentioning me! ✨`,
-    );
+    // --- Conversational AI (Fallback) ---
+    
+    // Check permission
+    const memberRecord = await prisma.member.findUnique({
+      where: { discordId: message.author.id },
+    });
+
+    if (!memberRecord || memberRecord.status !== 'OFFICIAL') {
+      return message.reply("Liza is busy with grimex rightnow, anything u wanna know , ask him first");
+    }
+
+    // Prepare question by removing the bot mention and keyword
+    let question = message.content.replace(new RegExp(`<@!?${botId}>`, 'g'), '').replace(/hey liza/gi, '').trim();
+    if (!question) {
+      // Give the AI a generic prompt to greet the user if they just typed "hey liza"
+      question = "Say hello to me!";
+    }
+
+    try {
+      // Trigger typing indicator
+      await message.channel.sendTyping();
+
+      // Check if the user mentioned a specific channel (e.g. <#123456789>)
+      const channelMentionRegex = /<#(\d+)>/;
+      const channelMatch = question.match(channelMentionRegex);
+      
+      let targetTextChannel = message.channel as TextChannel;
+      
+      if (channelMatch && channelMatch[1]) {
+        const mentionedChannelId = channelMatch[1];
+        try {
+          const fetchedChannel = await client.channels.fetch(mentionedChannelId);
+          if (fetchedChannel && fetchedChannel.isTextBased()) {
+            targetTextChannel = fetchedChannel as TextChannel;
+          }
+        } catch (e) {
+          console.log(`Could not fetch mentioned channel ${mentionedChannelId}`);
+        }
+      }
+
+      // Fetch last 50 messages for context (to save tokens as requested)
+      const fetchedMessages = await targetTextChannel.messages.fetch({ limit: 50 });
+      let contextMessages = fetchedMessages;
+
+      // Filter out bot messages from context to save tokens and focus on user chat
+      // Also filter out the current question message itself
+      const filteredContext = contextMessages.filter(msg => !msg.author.bot && msg.id !== message.id);
+
+      // Call AI Service
+      const { answer, tokens, durationMs } = await AISummaryService.answerQuestion(filteredContext, question);
+      
+      // Background Log
+      LoggerService.logAction(
+        client,
+        '💬 Conversational AI Used',
+        `User **${message.author.username}** asked a question in <#${message.channel.id}>`,
+        0x3b82f6, // Blue
+        [
+          { name: 'Question', value: question || 'Small talk' },
+          { name: 'Tokens Used', value: `${tokens.toLocaleString()}`, inline: true },
+          { name: 'Processing Time', value: `${(durationMs / 1000).toFixed(1)}s`, inline: true },
+        ]
+      ).catch(console.error);
+
+      return message.reply(answer);
+    } catch (error: any) {
+      console.error('❌ Error generating AI answer:', error);
+      
+      const errMsg = error?.message?.toLowerCase() || '';
+      if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('exhausted')) {
+        return message.reply('Liza is sleeping right now, call me back tomorrow 💤');
+      }
+      
+      if (errMsg.includes('503') || errMsg.includes('unavailable') || errMsg.includes('high demand')) {
+        return message.reply('Liza is feeling a bit dizzy from all the messages right now 😵‍💫 Please ask me again in a minute!');
+      }
+
+      return message.reply('❌ An error occurred while trying to answer your question. Please try again later.');
+    }
   }
 }

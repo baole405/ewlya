@@ -33,10 +33,17 @@ export async function execute(interaction: Interaction) {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error(error);
+      console.error('❌ Error executing command:', error);
       const msg = { content: 'There was an error while executing this command!', ephemeral: true };
-      if (interaction.replied || interaction.deferred) await interaction.followUp(msg);
-      else await interaction.reply(msg);
+      try {
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp(msg);
+        } else {
+          await interaction.reply(msg);
+        }
+      } catch (replyError) {
+        console.error('❌ Failed to send error message (Interaction may have already been acknowledged or expired):', replyError);
+      }
     }
     return;
   }

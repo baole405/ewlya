@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits, Partials, Collection, REST, Routes } from 'd
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 
 // Import Events
 import * as interactionCreate from './events/interaction-create';
@@ -41,8 +42,8 @@ class DarkStarBot {
 
     for (const file of commandFiles) {
       const filePath = path.join(commandsPath, file);
-      // Use dynamic import
-      const command = await import(filePath);
+      // Use dynamic import with pathToFileURL to support Windows absolute paths
+      const command = await import(pathToFileURL(filePath).href);
       
       if ('data' in command && 'execute' in command) {
         this.commands.set(command.data.name, command);
