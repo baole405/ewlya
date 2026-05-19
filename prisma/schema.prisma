@@ -1,11 +1,13 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 enum Role {
@@ -160,5 +162,16 @@ model AiSummary {
   requesterTag String?  // username#tag để dễ đọc
   model        String   @default("gemini-1.5-flash")
   createdAt    DateTime @default(now())
+}
+
+model ChatMessage {
+  id         String                 @id @default(cuid())
+  discordId  String                 @unique
+  content    String                 @db.Text
+  authorId   String
+  authorName String
+  channelId  String
+  createdAt  DateTime               @default(now())
+  embedding  Unsupported("vector")?
 }
 

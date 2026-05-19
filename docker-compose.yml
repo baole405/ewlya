@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: ewlya-db
     restart: unless-stopped
     environment:
@@ -51,7 +51,7 @@ services:
         condition: service_healthy
     networks:
       - ewlya-network
-    command: npm run start:dev:api
+    command: sh -c "npm install --include=dev && npm run start:dev:api"
     logging:
       driver: "json-file"
       options:
@@ -81,7 +81,7 @@ services:
         condition: service_healthy
     networks:
       - ewlya-network
-    command: npm run start:dev:bot
+    command: sh -c "npm install --include=dev && npm run start:dev:bot"
     logging:
       driver: "json-file"
       options:

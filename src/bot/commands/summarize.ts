@@ -126,8 +126,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       `Successfully summarized ${messages.size} messages in <#${targetChannel.id}>`,
       0x22c55e, // Green
       [
-        { name: 'Processing Time', value: `${(summaryResult.durationMs / 1000).toFixed(1)}s`, inline: true },
-        { name: 'Tokens Used', value: `${summaryResult.tokens}`, inline: true }
+        { name: 'Processing Time', value: `${(summaryResult.durationMs / 1000).toFixed(1)}s` },
+        { name: 'Tokens Used', value: `${summaryResult.tokens ?? 0}` }
       ]
     );
 
@@ -146,7 +146,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           value: [
             `• **Scope:** ${scopeLabel}`,
             `• **Scanned Messages:** ${summaryResult.messageCount.toLocaleString()}`,
-            `• **Tokens Used:** ${summaryResult.tokens.toLocaleString()}`,
+            `• **Tokens Used:** ${(summaryResult.tokens ?? 0).toLocaleString()}`,
             `• **Processing Time:** ${(summaryResult.durationMs / 1000).toFixed(1)}s`,
           ].join('\n'),
           inline: false,

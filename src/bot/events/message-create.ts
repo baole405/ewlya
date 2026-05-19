@@ -14,6 +14,35 @@ export async function execute(message: Message) {
   // Ignore messages from other bots
   if (message.author.bot) return;
 
+  // Store message in database for RAG long-term memory (fire and forget asynchronously)
+  if (message.guildId && message.content && message.content.trim().length > 0) {
+    prisma.chatMessage.create({
+      data: {
+        discordId: message.id,
+        content: message.content,
+        authorId: message.author.id,
+        authorName: message.member?.nickname ?? message.author.username,
+        channelId: message.channel.id,
+      }
+    }).then(async (dbMsg) => {
+      try {
+        const embedding = await AISummaryService.generateEmbedding(message.content);
+        const vectorStr = '[' + embedding.join(',') + ']';
+        await prisma.$executeRawUnsafe(
+          'UPDATE "ChatMessage" SET embedding = $1::vector WHERE id = $2',
+          vectorStr,
+          dbMsg.id
+        );
+      } catch (embErr) {
+        console.error(`❌ Failed to generate embedding for message ${message.id}:`, embErr);
+      }
+    }).catch(dbErr => {
+      if (dbErr.code !== 'P2002') {
+        console.error('❌ Failed to save message to ChatMessage table:', dbErr);
+      }
+    });
+  }
+
   const content = message.content.toLowerCase();
   const client = message.client as Client;
   const botId = client.user?.id;
@@ -84,7 +113,9 @@ export async function execute(message: Message) {
 
     try {
       // Trigger typing indicator
-      await message.channel.sendTyping();
+      if ('sendTyping' in message.channel) {
+        await (message.channel as any).sendTyping();
+      }
 
       // Check if the user mentioned a specific channel (e.g. <#123456789>)
       const channelMentionRegex = /<#(\d+)>/;
@@ -104,13 +135,12 @@ export async function execute(message: Message) {
         }
       }
 
-      // Fetch last 50 messages for context (to save tokens as requested)
-      const fetchedMessages = await targetTextChannel.messages.fetch({ limit: 50 });
-      let contextMessages = fetchedMessages;
+      // Fetch last 10 messages for conversational flow (to save tokens as requested)
+      const fetchedMessages = await targetTextChannel.messages.fetch({ limit: 10 });
+      const filteredContext = fetchedMessages.filter(msg => !msg.author.bot && msg.id !== message.id);
 
-      // Filter out bot messages from context to save tokens and focus on user chat
-      // Also filter out the current question message itself
-      const filteredContext = contextMessages.filter(msg => !msg.author.bot && msg.id !== message.id);
+      // Retrieve top 20 relevant messages from RAG long-term memory
+      const ragContext = await AISummaryService.retrieveRelevantContext(question, 20);
 
       // MOCK TEST COMMANDS BYPASS
       let answer = '';
@@ -126,8 +156,8 @@ export async function execute(message: Message) {
         tokens = 120;
         durationMs = 350;
       } else {
-        // Call AI Service
-        const aiResponse = await AISummaryService.answerQuestion(filteredContext, question);
+        // Call AI Service with both immediate context and RAG historical context
+        const aiResponse = await AISummaryService.answerQuestion(filteredContext, ragContext, question);
         answer = aiResponse.answer;
         tokens = aiResponse.tokens;
         durationMs = aiResponse.durationMs;
@@ -141,8 +171,8 @@ export async function execute(message: Message) {
         0x3b82f6, // Blue
         [
           { name: 'Question', value: question || 'Small talk' },
-          { name: 'Tokens Used', value: `${tokens.toLocaleString()}`, inline: true },
-          { name: 'Processing Time', value: `${(durationMs / 1000).toFixed(1)}s`, inline: true },
+          { name: 'Tokens Used', value: `${tokens.toLocaleString()}` },
+          { name: 'Processing Time', value: `${(durationMs / 1000).toFixed(1)}s` },
         ]
       ).catch(console.error);
 
