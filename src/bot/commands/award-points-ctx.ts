@@ -6,6 +6,11 @@ export const data = new ContextMenuCommandBuilder()
   .setType(ApplicationCommandType.Message);
 
 export async function execute(interaction: MessageContextMenuCommandInteraction) {
+  // 0. Environment Check (Local Bot Only)
+  if (process.env['IS_LOCAL_BOT'] !== 'true') {
+    return interaction.reply({ content: '❌ Award Point is disabled on the 24/7 cloud bot. Please run your local bot instance (`npm run bot:prod`) to calculate points.', flags: [MessageFlags.Ephemeral] });
+  }
+
   // 1. Security Check (Only Admins)
   const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
   if (!adminIds.includes(interaction.user.id)) {

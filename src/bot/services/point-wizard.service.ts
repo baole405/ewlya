@@ -20,6 +20,7 @@ export class PointWizardService {
    * Handles button interactions starting with calc_cat_
    */
   static async handleCategorySelection(interaction: ButtonInteraction) {
+    if (process.env['IS_LOCAL_BOT'] !== 'true') return;
     const parts = interaction.customId.split('_');
     const category = parts[2]; // 'crest' or 'ldb'
     const targetMemberId = parts[3];
@@ -128,6 +129,7 @@ export class PointWizardService {
    * Handles Leaderboard stage selection (shows rank menu)
    */
   static async handleStageSelection(interaction: StringSelectMenuInteraction) {
+    if (process.env['IS_LOCAL_BOT'] !== 'true') return;
     const parts = interaction.customId.split('_');
     const targetMemberId = parts[3];
     const messageId = parts[4] || '';
@@ -173,6 +175,7 @@ export class PointWizardService {
    * Handles the final point awarding logic for both Crests and Leaderboards
    */
   static async handleFinalSelection(interaction: ButtonInteraction | StringSelectMenuInteraction) {
+    if (process.env['IS_LOCAL_BOT'] !== 'true') return;
     const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map((id) => id.trim());
     if (!adminIds.includes(interaction.user.id)) {
       return interaction.reply({ content: '❌ Only admins can use this.', flags: [MessageFlags.Ephemeral] });
@@ -262,6 +265,7 @@ export class PointWizardService {
    * Handles Save to DB
    */
   static async handleConfirmSave(interaction: ButtonInteraction) {
+    if (process.env['IS_LOCAL_BOT'] !== 'true') return;
     const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map((id) => id.trim());
     if (!adminIds.includes(interaction.user.id)) return interaction.reply({ content: '❌ No permission', flags: [MessageFlags.Ephemeral] });
 
@@ -341,6 +345,7 @@ export class PointWizardService {
    * Handles Back button
    */
   static async handleBack(interaction: ButtonInteraction) {
+    if (process.env['IS_LOCAL_BOT'] !== 'true') return;
     const parts = interaction.customId.split('_');
     const backTarget = parts[2];
     const targetMemberId = parts[3];
@@ -401,6 +406,7 @@ export class PointWizardService {
   }
 
   static async handleCancel(interaction: ButtonInteraction) {
+    if (process.env['IS_LOCAL_BOT'] !== 'true') return;
     const parts = interaction.customId.split('_');
     const messageId = parts[2];
 
@@ -416,6 +422,7 @@ export class PointWizardService {
   }
 
   static async handleEditList(interaction: ButtonInteraction) {
+    if (process.env['IS_LOCAL_BOT'] !== 'true') return;
     const parts = interaction.customId.split('_');
     const targetMemberId = parts[3];
     const originalMessageId = parts[4];
