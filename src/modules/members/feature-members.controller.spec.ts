@@ -1,12 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { FeatureMembersController } from './feature-members.controller';
-// import { MemberService } from '@ds/web/data-access'; // Removed broken Nx import
+import { FeatureMembersService } from './feature-members.service';
 
 describe('FeatureMembersController', () => {
   let controller: FeatureMembersController;
 
-  const mockMemberService = {
-    members: () => [{ id: '1', nickname: 'Test Member', points: 100 }],
+  const mockFeatureMembersService = {
+    getAllMembers: jest.fn().mockResolvedValue([{ id: '1', nickname: 'Test Member', points: 100 }]),
+    getOfficialMembers: jest.fn().mockResolvedValue([]),
+    getMemberById: jest.fn().mockResolvedValue({}),
+    updateMember: jest.fn().mockResolvedValue({}),
+    updatePoints: jest.fn().mockResolvedValue({}),
+    deleteMember: jest.fn().mockResolvedValue({}),
   };
 
   beforeEach(async () => {
@@ -14,8 +19,8 @@ describe('FeatureMembersController', () => {
       controllers: [FeatureMembersController],
       providers: [
         {
-          provide: 'MemberService', // Hoặc class thực tế tùy vào DI
-          useValue: mockMemberService,
+          provide: FeatureMembersService,
+          useValue: mockFeatureMembersService,
         },
       ],
     }).compile();

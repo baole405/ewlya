@@ -63,11 +63,11 @@ export class PointWizardService {
     if (category === 'sreq') {
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`calc_final_sreq_rep_${targetMemberId}_${messageId}`)
+          .setCustomId(`calc_final_sreq_eq_rep_${targetMemberId}_${messageId}`)
           .setLabel('Rep (5 pts)')
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
-          .setCustomId(`calc_final_sreq_custom_${targetMemberId}_${messageId}`)
+          .setCustomId(`calc_final_sreq_eq_custom_${targetMemberId}_${messageId}`)
           .setLabel('Custom (20 pts)')
           .setStyle(ButtonStyle.Danger),
         new ButtonBuilder()

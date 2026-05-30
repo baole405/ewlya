@@ -234,26 +234,75 @@ export async function execute(interaction: Interaction) {
       return;
     }
 
-    if (customId === 'help_points_progression') {
-      const embed = new EmbedBuilder()
-        .setTitle('💎 DarkStar Points & Progression Guide')
-        .setColor(0x10b981)
-        .setDescription(
-          '**Points System:**\n' +
-          '• Earn points by submitting screenshots (Crests, Leaderboard rank, SR Equipments) in the Hall of Fame channel.\n' +
-          '• Administrators verify your screenshots using reaction emojis to automatically calculate and credit your points.\n\n' +
-          '**Raid Progression Checks:**\n' +
-          '• Active Raid Progression Checks (e.g., Weekly Raids, Mine Clears) are created periodically by Administrators.\n' +
-          '• Use `/check-status` to see if you have met the requirements or are postponing.\n' +
-          '• Grimex verifies progression completions via reaction, sending automated confirmation alerts.\n\n' +
-          '**Seasons:**\n' +
-          '• Points accumulate within the duration of an active Clan Season.\n' +
-          '• Check your seasonal rankings and standings using `/progression-now`.'
-        )
-        .setTimestamp();
+    if (customId === 'help_season_ldb') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const activeSeason = await prisma.season.findFirst({ where: { isActive: true } });
+        if (!activeSeason) {
+          return interaction.editReply({ content: '❌ There is no active season right now. Ask an admin to start one with `/season start`.' });
+        }
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+        const submissions = await prisma.submission.groupBy({
+          by: ['memberId'],
+          where: { seasonId: activeSeason.id },
+          _sum: { points: true },
+        });
+
+        if (submissions.length === 0) {
+          const emptyEmbed = new EmbedBuilder()
+            .setColor(0x38bdf8)
+            .setTitle(`🏆 ${activeSeason.name} — Live Leaderboard`)
+            .setDescription('No points have been recorded yet this season. Be the first!')
+            .setTimestamp();
+          return interaction.editReply({ embeds: [emptyEmbed] });
+        }
+
+        const memberIds = submissions.map((s) => s.memberId);
+        const members = await prisma.member.findMany({ where: { id: { in: memberIds } } });
+
+        const discordIds = members.map((m) => m.discordId).filter(Boolean) as string[];
+        const guildMembers = new Map<string, any>();
+        if (interaction.guild && discordIds.length > 0) {
+          try {
+            const fetched = await interaction.guild.members.fetch({ user: discordIds });
+            fetched.forEach((gm: any, id: string) => guildMembers.set(id, gm));
+          } catch (_) { /* ignore fetch errors */ }
+        }
+
+        const ranked = submissions
+          .map((sub) => {
+            const dbMember = members.find((m) => m.id === sub.memberId);
+            const gm = dbMember?.discordId ? guildMembers.get(dbMember.discordId) : null;
+            return {
+              name: gm ? gm.displayName : (dbMember?.nickname || 'Unknown'),
+              points: sub._sum.points || 0,
+            };
+          })
+          .sort((a, b) => b.points - a.points);
+
+        const MEDALS = ['🥇', '🥈', '🥉'];
+        const list = ranked
+          .map((entry, i) => `${MEDALS[i] || '🏅'} **${entry.name}** — ${entry.points} pts`)
+          .join('\n');
+
+        const startStr = activeSeason.startDate
+          ? `<t:${Math.floor(new Date(activeSeason.startDate).getTime() / 1000)}:D>`
+          : '—';
+
+        const embed = new EmbedBuilder()
+          .setColor(0x38bdf8)
+          .setTitle(`🏆 ${activeSeason.name} — Live Leaderboard`)
+          .setDescription(list.length > 4000 ? list.substring(0, 4000) + '\n...' : list)
+          .setFooter({ text: `${ranked.length} participant(s) • Season started ${startStr.replace(/<|>/g, '')}` })
+          .setTimestamp();
+
+        return interaction.editReply({ embeds: [embed] });
+      } catch (err) {
+        console.error('[help_season_ldb] Error:', err);
+        return interaction.editReply({ content: '❌ Failed to load leaderboard. Please try again later.' });
+      }
     }
+
 
     if (customId === 'help_clan_vision') {
       await interaction.deferReply({ ephemeral: true });

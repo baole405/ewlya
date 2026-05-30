@@ -85,6 +85,22 @@ export const data = new SlashCommandBuilder()
               .addIntegerOption(opt => opt.setName('amount').setDescription('Amount of points to grant').setRequired(true))
               .addStringOption(opt => opt.setName('reason').setDescription('Reason for granting points').setRequired(true))
          )
+  )
+  .addSubcommandGroup(group =>
+    group.setName('award')
+         .setDescription('Award points manually')
+         .addSubcommand(sub =>
+           sub.setName('point')
+              .setDescription('Manually award points to a member in the ACTIVE season.')
+              .addStringOption(opt => 
+                opt.setName('member')
+                   .setDescription('The member to receive points')
+                   .setRequired(true)
+                   .setAutocomplete(true)
+              )
+              .addIntegerOption(opt => opt.setName('amount').setDescription('Amount of points to award').setRequired(true))
+              .addStringOption(opt => opt.setName('reason').setDescription('Reason for awarding points').setRequired(true))
+         )
   );
 
 export async function autocomplete(interaction: AutocompleteInteraction) {
@@ -157,7 +173,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const subcommandGroup = interaction.options.getSubcommandGroup(false);
   const subcommand = interaction.options.getSubcommand();
   
-  await interaction.deferReply({ ephemeral: subcommandGroup === 'add' || subcommand === 'view' || subcommandGroup === 'edit' || subcommandGroup === 'fix' }); // Ephemeral for utility commands
+  await interaction.deferReply({ ephemeral: subcommandGroup === 'add' || subcommandGroup === 'award' || subcommand === 'view' || subcommandGroup === 'edit' || subcommandGroup === 'fix' }); // Ephemeral for utility commands
 
   if (subcommandGroup === 'edit' && subcommand === 'name') {
     await SeasonService.editSeasonName(interaction);
@@ -182,7 +198,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       console.error('Error fixing points:', error);
       await interaction.editReply(`❌ Error: ${error.message}`);
     }
-  } else if (subcommandGroup === 'add' && subcommand === 'point') {
+  } else if ((subcommandGroup === 'add' || subcommandGroup === 'award') && subcommand === 'point') {
     const memberId = interaction.options.getString('member', true);
     const amount = interaction.options.getInteger('amount', true);
     const reason = interaction.options.getString('reason', true);

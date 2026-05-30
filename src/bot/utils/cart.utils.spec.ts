@@ -177,4 +177,53 @@ describe('Shopping Cart - Point Accumulation', () => {
       expect(cartMessage).toContain('Total Points to award: 64');
     });
   });
+
+  describe('Point Wizard Integration and Parsing', () => {
+    const { getOptionById } = require('../services/point-calculator.service');
+
+    it('should correctly resolve Crest 4+ option', () => {
+      const customId = 'calc_final_crest_4plus_12345_6789';
+      const parts = customId.split('_');
+      parts.pop(); // messageId
+      parts.pop(); // memberId
+      const optionId = parts[3] + (parts[4] ? '_' + parts[4] : '');
+      const type = parts[2];
+      const catKey = type === 'crest' ? 'CRESTS' : 'SR_EQ';
+
+      const option = getOptionById(catKey, optionId);
+      expect(option).toBeDefined();
+      expect(option?.points).toBe(8);
+      expect(option?.label).toBe('4+');
+    });
+
+    it("should correctly resolve SR's EQ Rep option with the new eq_ prefix pattern", () => {
+      const customId = 'calc_final_sreq_eq_rep_12345_6789';
+      const parts = customId.split('_');
+      parts.pop(); // messageId
+      parts.pop(); // memberId
+      const optionId = parts[3] + (parts[4] ? '_' + parts[4] : '');
+      const type = parts[2];
+      const catKey = type === 'crest' ? 'CRESTS' : 'SR_EQ';
+
+      const option = getOptionById(catKey, optionId);
+      expect(option).toBeDefined();
+      expect(option?.points).toBe(5);
+      expect(option?.label).toBe('Rep');
+    });
+
+    it("should correctly resolve SR's EQ Custom option with the new eq_ prefix pattern", () => {
+      const customId = 'calc_final_sreq_eq_custom_12345_6789';
+      const parts = customId.split('_');
+      parts.pop(); // messageId
+      parts.pop(); // memberId
+      const optionId = parts[3] + (parts[4] ? '_' + parts[4] : '');
+      const type = parts[2];
+      const catKey = type === 'crest' ? 'CRESTS' : 'SR_EQ';
+
+      const option = getOptionById(catKey, optionId);
+      expect(option).toBeDefined();
+      expect(option?.points).toBe(20);
+      expect(option?.label).toBe('Custom');
+    });
+  });
 });

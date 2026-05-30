@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProgressionService } from './progression.service';
 import { prisma } from '../../database/prisma';
+import { DiscordBotService } from '../../bot/discord-bot.service';
 
 // Mock prisma client
 jest.mock('../../database/prisma', () => ({
@@ -38,7 +39,15 @@ describe('ProgressionService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ProgressionService],
+      providers: [
+        ProgressionService,
+        {
+          provide: DiscordBotService,
+          useValue: {
+            sendMessage: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<ProgressionService>(ProgressionService);

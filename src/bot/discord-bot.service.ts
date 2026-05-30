@@ -199,8 +199,8 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
                 .setLabel('🆘 View Commands')
                 .setStyle(ButtonStyle.Primary),
               new ButtonBuilder()
-                .setCustomId('help_points_progression')
-                .setLabel('💎 Points & Raid')
+                .setCustomId('help_season_ldb')
+                .setLabel('🏆 Season LDB')
                 .setStyle(ButtonStyle.Success),
               new ButtonBuilder()
                 .setCustomId('help_clan_vision')
