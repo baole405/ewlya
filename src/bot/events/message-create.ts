@@ -94,14 +94,61 @@ export async function execute(message: Message) {
     }
 
     // --- Conversational AI (Fallback) ---
-    
-    // Check permission
+    const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+    const isAdmin = adminIds.includes(message.author.id);
+
     const memberRecord = await prisma.member.findUnique({
       where: { discordId: message.author.id },
     });
+    const isOfficial = memberRecord && memberRecord.status === 'OFFICIAL';
 
-    if (!memberRecord || memberRecord.status !== 'OFFICIAL') {
-      return message.reply("Liza is busy with grimex rightnow, anything u wanna know , ask him first");
+    const guideChannelId = '1505244602318454904';
+    const testChannelId = process.env['TEST_CHANNEL_ID'];
+    const isGuideChannel = message.channelId === guideChannelId || message.channelId === testChannelId;
+
+    if (!isAdmin && !isOfficial) {
+      if (isGuideChannel) {
+        // Visitor querying in guide/workspace channel -> Answer about clan vision ONLY!
+        let question = message.content.replace(new RegExp(`<@!?${botId}>`, 'g'), '').replace(/hey liza/gi, '').trim();
+        if (!question) question = "What is the vision of DarkStar?";
+
+        try {
+          if ('sendTyping' in message.channel) {
+            await (message.channel as any).sendTyping();
+          }
+
+          // Fetch vision from vision channel: 1303078062950449193
+          const visionChannelId = '1303078062950449193';
+          const visionChannel = await client.channels.fetch(visionChannelId).catch(() => null);
+          let visionContext = '';
+          if (visionChannel && visionChannel.isTextBased()) {
+            const visionMsgs = await (visionChannel as any).messages.fetch({ limit: 50 }).catch(() => null);
+            if (visionMsgs) {
+              visionContext = [...visionMsgs.values()]
+                .reverse()
+                .map(m => m.content)
+                .join('\n');
+            }
+          }
+
+          const systemPrompt = `You are "Liza", the friendly AI assistant for the mobile gaming clan "DarkStar".
+A visitor (who is not an official clan member) is asking you a question about the clan's vision, goals, or general information.
+Please answer their question politely based ONLY on the Clan Vision Context provided below.
+If their question is completely unrelated to the clan's vision, goals, or general info, politely explain that as an assistant for visitors, you can only answer questions regarding DarkStar's clan vision and goals.
+
+--- CLAN VISION CONTEXT ---
+${visionContext || 'DarkStar is a mobile gaming clan focused on progression, teamplay, and community.'}
+--- END OF CONTEXT ---`;
+
+          const { text: answer } = await AISummaryService.callLLM(systemPrompt, question, 500);
+          return message.reply(answer);
+        } catch (error) {
+          console.error('❌ Visitor AI Error:', error);
+          return message.reply('❌ An error occurred while trying to process your request. Please try again later.');
+        }
+      } else {
+        return message.reply("Liza is busy with grimex rightnow, anything u wanna know , ask him first");
+      }
     }
 
     // Prepare question by removing the bot mention and keyword

@@ -18,6 +18,24 @@ export async function execute(interaction: Interaction) {
 
     if (!command) return;
 
+    // Access Controls for Commands
+    const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+    const isAdmin = adminIds.includes(interaction.user.id);
+
+    const member = await prisma.member.findUnique({ where: { discordId: interaction.user.id } });
+    const isOfficial = member && member.status === 'OFFICIAL';
+
+    const isMemberCommand = ['progression-now', 'check-status', 'list-members', 'help'].includes(interaction.commandName);
+    const isAdminCommand = !isMemberCommand;
+
+    if (isAdminCommand && !isAdmin) {
+      return interaction.reply({ content: '❌ This command is restricted to Administrators only.', ephemeral: true });
+    }
+
+    if (isMemberCommand && !isAdmin && !isOfficial) {
+      return interaction.reply({ content: '❌ This command is restricted to Official Clan Members only.', ephemeral: true });
+    }
+
     // AUDIT LOG (Fire and forget)
     LoggerService.logAction(
       interaction.client,
@@ -135,6 +153,153 @@ export async function execute(interaction: Interaction) {
       }
 
       return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    if (customId === 'help_edit_member') {
+      // Fetch member from database
+      const member = await prisma.member.findUnique({
+        where: { discordId: interaction.user.id }
+      });
+
+      if (!member) {
+        return interaction.reply({
+          content: '❌ You are not registered in the clan member database yet.',
+          ephemeral: true
+        });
+      }
+
+      // Check if they are an official member or admin
+      const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+      const isAdmin = adminIds.includes(interaction.user.id);
+      if (!isAdmin && member.status !== 'OFFICIAL') {
+        return interaction.reply({
+          content: '❌ This profile editing is restricted to Official Clan Members only.',
+          ephemeral: true
+        });
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId('member_edit_modal')
+        .setTitle('Edit Member Profile');
+
+      const ignInput = new TextInputBuilder()
+        .setCustomId('edit_ign')
+        .setLabel('IGN (In-Game Name)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., DarkStarHero')
+        .setValue(member.ign || '')
+        .setRequired(true);
+
+      const gsCodeInput = new TextInputBuilder()
+        .setCustomId('edit_gs_code')
+        .setLabel('GS Friend Code')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., 123-456-789')
+        .setValue(member.gsCode || '')
+        .setRequired(false);
+
+      const genderInput = new TextInputBuilder()
+        .setCustomId('edit_gender')
+        .setLabel('Gender')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., Male, Female')
+        .setValue(member.gender || '')
+        .setRequired(false);
+
+      const birthdateInput = new TextInputBuilder()
+        .setCustomId('edit_birthdate')
+        .setLabel('Birthdate (DD/MM/YYYY)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., 15/08/2005')
+        .setValue(member.birthdate || '')
+        .setRequired(false);
+
+      const countryInput = new TextInputBuilder()
+        .setCustomId('edit_country')
+        .setLabel('Country')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., Vietnam')
+        .setValue(member.country || '')
+        .setRequired(false);
+
+      modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(ignInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(gsCodeInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(genderInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(birthdateInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(countryInput)
+      );
+
+      await interaction.showModal(modal);
+      return;
+    }
+
+    if (customId === 'help_points_progression') {
+      const embed = new EmbedBuilder()
+        .setTitle('💎 DarkStar Points & Progression Guide')
+        .setColor(0x10b981)
+        .setDescription(
+          '**Points System:**\n' +
+          '• Earn points by submitting screenshots (Crests, Leaderboard rank, SR Equipments) in the Hall of Fame channel.\n' +
+          '• Administrators verify your screenshots using reaction emojis to automatically calculate and credit your points.\n\n' +
+          '**Raid Progression Checks:**\n' +
+          '• Active Raid Progression Checks (e.g., Weekly Raids, Mine Clears) are created periodically by Administrators.\n' +
+          '• Use `/check-status` to see if you have met the requirements or are postponing.\n' +
+          '• Grimex verifies progression completions via reaction, sending automated confirmation alerts.\n\n' +
+          '**Seasons:**\n' +
+          '• Points accumulate within the duration of an active Clan Season.\n' +
+          '• Check your seasonal rankings and standings using `/progression-now`.'
+        )
+        .setTimestamp();
+
+      return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    if (customId === 'help_clan_vision') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const visionChannelId = '1303078062950449193';
+        const visionChannel = await interaction.client.channels.fetch(visionChannelId).catch(() => null);
+        let visionContext = '';
+        if (visionChannel && visionChannel.isTextBased()) {
+          const visionMsgs = await (visionChannel as any).messages.fetch({ limit: 50 }).catch(() => null);
+          if (visionMsgs) {
+            visionContext = [...visionMsgs.values()]
+              .reverse()
+              .map(m => m.content)
+              .join('\n');
+          }
+        }
+
+        const embed = new EmbedBuilder()
+          .setTitle('🌌 DarkStar Clan Vision & Goals')
+          .setColor(0x8b5cf6)
+          .setDescription(visionContext || 'DarkStar is a mobile gaming clan focused on progression, teamplay, and community.')
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+      } catch (err) {
+        console.error(err);
+        await interaction.editReply('❌ Failed to fetch clan vision context. Please try again later.');
+      }
+      return;
+    }
+
+    if (customId === 'help_ask_liza') {
+      const modal = new ModalBuilder()
+        .setCustomId('help_ask_liza_modal')
+        .setTitle('Ask Liza AI');
+
+      const questionInput = new TextInputBuilder()
+        .setCustomId('liza_question_input')
+        .setLabel('What would you like to ask?')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('e.g., What is the clan vision? or (for members) how many points do I have?')
+        .setRequired(true);
+
+      modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(questionInput));
+      await interaction.showModal(modal);
+      return;
     }
   }
 
@@ -258,6 +423,107 @@ export async function execute(interaction: Interaction) {
       } catch (err) {
         console.error(err);
         await interaction.editReply('❌ An error occurred while updating progress.');
+      }
+      return;
+    }
+
+    if (customId === 'member_edit_modal') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const ign = interaction.fields.getTextInputValue('edit_ign');
+        const gsCode = interaction.fields.getTextInputValue('edit_gs_code');
+        const gender = interaction.fields.getTextInputValue('edit_gender');
+        const birthdate = interaction.fields.getTextInputValue('edit_birthdate');
+        const country = interaction.fields.getTextInputValue('edit_country');
+
+        // Update database
+        await prisma.member.update({
+          where: { discordId: interaction.user.id },
+          data: {
+            ign,
+            gsCode: gsCode || null,
+            gender: gender || null,
+            birthdate: birthdate || null,
+            country: country || null,
+          }
+        });
+
+        await LoggerService.logAction(
+          interaction.client,
+          '📝 Member Profile Updated',
+          `User **${interaction.user.username}** updated their profile fields.`,
+          0x38bdf8,
+          [
+            { name: 'IGN', value: ign },
+            { name: 'GS Code', value: gsCode || 'None' },
+            { name: 'Gender', value: gender || 'None' },
+            { name: 'Birthdate', value: birthdate || 'None' },
+            { name: 'Country', value: country || 'None' }
+          ]
+        );
+
+        await interaction.editReply('✅ Your profile has been updated successfully!');
+      } catch (err) {
+        console.error('❌ Error saving profile update:', err);
+        await interaction.editReply('❌ An error occurred while saving your profile update.');
+      }
+      return;
+    }
+
+    if (customId === 'help_ask_liza_modal') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const question = interaction.fields.getTextInputValue('liza_question_input');
+        const { AISummaryService } = await import('../services/ai-summary.service');
+
+        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+        const isAdmin = adminIds.includes(interaction.user.id);
+
+        const member = await prisma.member.findUnique({ where: { discordId: interaction.user.id } });
+        const isOfficial = member && member.status === 'OFFICIAL';
+
+        if (isAdmin || isOfficial) {
+          // Member conversational AI
+          const channel = await interaction.client.channels.fetch(interaction.channelId).catch(() => null);
+          let messages = new Map();
+          if (channel && channel.isTextBased()) {
+            messages = await (channel as any).messages.fetch({ limit: 10 }).catch(() => new Map());
+          }
+          
+          const ragMessages = await AISummaryService.retrieveRelevantContext(question, 20);
+          const aiResponse = await AISummaryService.answerQuestion(messages as any, ragMessages, question);
+          
+          await interaction.editReply(aiResponse.answer);
+        } else {
+          // Visitor -> Fetch vision channel
+          const visionChannelId = '1303078062950449193';
+          const visionChannel = await interaction.client.channels.fetch(visionChannelId).catch(() => null);
+          let visionContext = '';
+          if (visionChannel && visionChannel.isTextBased()) {
+            const visionMsgs = await (visionChannel as any).messages.fetch({ limit: 50 }).catch(() => null);
+            if (visionMsgs) {
+              visionContext = [...visionMsgs.values()]
+                .reverse()
+                .map(m => m.content)
+                .join('\n');
+            }
+          }
+
+          const systemPrompt = `You are "Liza", the friendly AI assistant for the mobile gaming clan "DarkStar".
+A visitor (who is not an official clan member) is asking you a question about the clan's vision, goals, or general information.
+Please answer their question politely based ONLY on the Clan Vision Context provided below.
+If their question is completely unrelated to the clan's vision, goals, or general info, politely explain that as an assistant for visitors, you can only answer questions regarding DarkStar's clan vision and goals.
+
+--- CLAN VISION CONTEXT ---
+${visionContext || 'DarkStar is a mobile gaming clan focused on progression, teamplay, and community.'}
+--- END OF CONTEXT ---`;
+
+          const { text: answer } = await AISummaryService.callLLM(systemPrompt, question, 500);
+          await interaction.editReply(answer);
+        }
+      } catch (err) {
+        console.error('❌ Ask Liza AI Modal Error:', err);
+        await interaction.editReply('❌ An error occurred while trying to process your request. Please try again later.');
       }
       return;
     }

@@ -10,104 +10,6 @@ import { AppModule } from '../app/app.module';
 import 'dotenv/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-// Bot imports
-import { Client, GatewayIntentBits, Partials, Collection, REST, Routes } from 'discord.js';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as interactionCreate from '../bot/events/interaction-create';
-import * as messageReactionAdd from '../bot/events/message-reaction-add';
-import * as messageCreate from '../bot/events/message-create';
-import * as ready from '../bot/events/ready';
-
-// ==================== DISCORD BOT ====================
-class DarkStarBot {
-  private client: Client;
-  private commands = new Collection<string, any>();
-
-  constructor() {
-    this.client = new Client({
-      intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageReactions,
-        GatewayIntentBits.GuildMembers,
-      ],
-      partials: [Partials.Message, Partials.Reaction, Partials.User],
-    });
-
-    this.initializeCommands();
-    this.initializeEvents();
-  }
-
-  private async initializeCommands() {
-    const commandsPath = path.join(__dirname, '..', 'bot', 'commands');
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts') || file.endsWith('.js'));
-
-    console.log(`📂 Found ${commandFiles.length} command files.`);
-
-    for (const file of commandFiles) {
-      const filePath = path.join(commandsPath, file);
-      const command = await import(filePath);
-
-      if ('data' in command && 'execute' in command) {
-        this.commands.set(command.data.name, command);
-        console.log(`✅ Loaded command: /${command.data.name}`);
-      } else {
-        console.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-      }
-    }
-    (this.client as any).commands = this.commands;
-  }
-
-  private initializeEvents() {
-    this.client.on('ready', (c) => (ready as any).execute(c));
-    this.client.on('interactionCreate', (i) => (interactionCreate as any).execute(i));
-    this.client.on('messageCreate', (m) => (messageCreate as any).execute(m));
-    this.client.on('messageReactionAdd', (r, u) => (messageReactionAdd as any).execute(r, u));
-
-    console.log(`📂 Registered 4 core event handlers.`);
-  }
-
-  private async registerSlashCommands() {
-    const token = process.env['DISCORD_TOKEN'];
-    const clientId = process.env['DISCORD_CLIENT_ID'];
-
-    if (!token || !clientId) {
-      console.error('❌ Missing token or clientId for slash command registration.');
-      return;
-    }
-
-    const rest = new REST({ version: '10' }).setToken(token);
-    const body = Array.from(this.commands.values()).map((c) => c.data.toJSON());
-
-    try {
-      await rest.put(Routes.applicationCommands(clientId), { body: [] });
-      console.log('🧹 Cleared global commands.');
-
-      const guilds = await this.client.guilds.fetch();
-      console.log(`🚀 Registering ${body.length} Slash Commands for ${guilds.size} guilds...`);
-      for (const [guildId] of guilds) {
-        await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body });
-        console.log(`✅ Registered for Guild: ${guildId}`);
-      }
-      console.log('✅ All Slash Commands registered successfully!');
-    } catch (error) {
-      console.error('❌ Failed to register Slash Commands:', error);
-    }
-  }
-
-  public async start() {
-    console.log('🤖 DarkStar Bot is initializing...');
-    try {
-      await this.client.login(process.env['DISCORD_TOKEN']);
-      setTimeout(() => this.registerSlashCommands(), 2000);
-    } catch (err) {
-      console.error('Bot Login Failed:', err);
-    }
-  }
-}
-
 // ==================== NESTJS API ====================
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -190,12 +92,8 @@ async function main() {
   console.log('🌟 DarkStar Combined Server Starting...');
   console.log('='.repeat(50));
 
-  // Start API first (provides the HTTP server that Render needs)
+  // Start API and Discord Bot (via NestJS AppModule and DiscordBotService)
   await bootstrap();
-
-  // Then start the Discord Bot
-  const bot = new DarkStarBot();
-  await bot.start();
 
   console.log('='.repeat(50));
   console.log('✅ API + Bot are both running!');

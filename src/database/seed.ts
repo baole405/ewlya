@@ -16,6 +16,10 @@ async function main() {
   await prisma.box.deleteMany();
   await prisma.submission.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.memberRequirementStatus.deleteMany();
+  await prisma.memberProgressionStatus.deleteMany();
+  await prisma.progressionRequirement.deleteMany();
+  await prisma.progressionCheck.deleteMany();
   await prisma.member.deleteMany();
   await prisma.season.deleteMany();
 

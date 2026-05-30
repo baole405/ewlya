@@ -118,12 +118,51 @@ class DarkStarBot {
 
   public async start() {
     console.log('🤖 DarkStar Bot is initializing...');
+
+    const isLocalBot = process.env['IS_LOCAL_BOT'] === 'true';
+    const productionUrl = process.env['PRODUCTION_URL'];
+
+    if (isLocalBot && productionUrl) {
+      console.log(`📡 Local bot mode active. Requesting lease from production bot at ${productionUrl}...`);
+      await this.sendLeasePing();
+      
+      // Start heartbeat
+      setInterval(() => this.sendLeasePing(), 30000);
+      
+      // Delay connection to give production bot time to disconnect
+      console.log('⏳ Waiting 3 seconds for production bot to disconnect...');
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
+
     try {
       await this.client.login(process.env['DISCORD_TOKEN']);
       // Give it a second to fetch guilds before registering commands
       setTimeout(() => this.registerSlashCommands(), 2000);
     } catch (err) {
       console.error('Login Failed:', err);
+    }
+  }
+
+  private async sendLeasePing() {
+    const productionUrl = process.env['PRODUCTION_URL'];
+    const token = process.env['DISCORD_TOKEN'];
+    if (!productionUrl || !token) return;
+
+    try {
+      const response = await fetch(`${productionUrl}/api/bot/lease-pause`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-bot-token': token,
+        },
+      });
+      if (response.ok) {
+        console.log('✅ Sent heartbeat to production bot. Lease renewed.');
+      } else {
+        console.warn(`⚠️ Failed to lease-pause production bot: ${response.statusText}`);
+      }
+    } catch (err) {
+      console.error('❌ Error sending lease ping to production bot:', err);
     }
   }
 }

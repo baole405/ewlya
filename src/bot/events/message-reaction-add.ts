@@ -120,7 +120,8 @@ export async function execute(
 
     // 1. Restrict to grimex only
     if (!user.username.toLowerCase().includes('grimex')) {
-      const warningMsg = await (message.channel as any).send(`❌ <@${user.id}>, only **grimex** is authorized to verify progressions using the ✅ reaction!`);
+      const channel: any = message.channel;
+      const warningMsg = await channel.send(`❌ <@${user.id}>, only **grimex** is authorized to verify progressions using the ✅ reaction!`);
       setTimeout(() => warningMsg.delete().catch(() => {}), 5000);
       await reaction.users.remove(user.id).catch(() => {});
       return;

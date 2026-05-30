@@ -35,14 +35,88 @@ export class AISummaryService {
   }
 
   /**
-   * Summarize a collection of Discord messages using Gemini AI.
+   * Helper to invoke different LLM APIs (Gemini, OpenRouter, Pollinations, OpenAI custom endpoints)
+   */
+  public static async callLLM(
+    systemPrompt: string,
+    userPrompt: string,
+    maxTokens: number = 1000
+  ): Promise<{ text: string; tokens: number }> {
+    const provider = (process.env['AI_PROVIDER'] || 'gemini').toLowerCase();
+    const apiKey = process.env['AI_API_KEY'] || process.env['GEMINI_API_KEY'];
+    const modelName = process.env['AI_MODEL'];
+
+    if (provider === 'gemini') {
+      const model = this.getModel();
+      const prompt = `${systemPrompt}\n\n${userPrompt}`;
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const tokens = result.response.usageMetadata?.totalTokenCount || 0;
+      return { text, tokens };
+    }
+
+    let url = '';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    let bodyModel = '';
+
+    if (provider === 'pollinations') {
+      url = 'https://text.pollinations.ai/openai';
+      bodyModel = modelName || 'qwen';
+    } else if (provider === 'openrouter') {
+      url = 'https://openrouter.ai/api/v1/chat/completions';
+      bodyModel = modelName || 'meta-llama/llama-3-8b-instruct:free';
+      headers['Authorization'] = `Bearer ${apiKey || ''}`;
+      headers['HTTP-Referer'] = 'https://github.com/baole405/Ewlya';
+      headers['X-OpenRouter-Title'] = 'Ewlya Bot';
+    } else if (provider === 'openai') {
+      const baseUrl = process.env['AI_BASE_URL'] || 'https://api.openai.com/v1';
+      url = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+      bodyModel = modelName || 'gpt-4o-mini';
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+    } else {
+      throw new Error(`Unsupported AI provider: ${provider}`);
+    }
+
+    const requestBody = {
+      model: bodyModel,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`LLM API Request failed (${provider}): ${response.status} ${response.statusText} - ${errText}`);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    const tokens = data.usage?.total_tokens || 0;
+
+    return { text, tokens };
+  }
+
+  /**
+   * Summarize a collection of Discord messages using the selected LLM.
    */
   static async summarize(
     messages: Collection<string, Message>,
     options: SummaryOptions,
   ): Promise<SummaryResult> {
     const start = Date.now();
-    const model = this.getModel();
 
     // Sort messages oldest → newest for chronological context
     const sorted = [...messages.values()].sort(
@@ -65,14 +139,14 @@ export class AISummaryService {
           summary,
           requestedBy: options.requestedBy,
           requesterTag: options.requesterTag,
-          model: 'gemini-flash-latest (MOCK)',
+          model: `${process.env['AI_PROVIDER'] || 'gemini'} (MOCK)`,
         },
       });
 
       return {
         summary,
         messageCount: sorted.length,
-        model: 'gemini-flash-latest (MOCK)',
+        model: `${process.env['AI_PROVIDER'] || 'gemini'} (MOCK)`,
         durationMs,
         tokens: 150,
       };
@@ -102,7 +176,7 @@ export class AISummaryService {
       ? `last ${options.hoursScanned} hour(s)`
       : `last ${options.limitUsed ?? sorted.length} messages`;
 
-    const prompt = `You are an AI assistant for a mobile gaming Discord guild/clan.
+    const systemPrompt = `You are an AI assistant for a mobile gaming Discord guild/clan.
 Please summarize the following conversation from ${channelDisplay} (${scopeDesc}, ${sorted.length} messages).
 
 Required output format (use English, markdown):
@@ -126,16 +200,16 @@ Rules:
 - Be concise and to the point, do not be verbose.
 - Keep member names exactly as they appear.
 - If the chat is mostly images or spam, state that clearly.
-- Maximum 400 words.
+- Maximum 400 words.`;
 
---- MESSAGES ---
+    const userPrompt = `--- MESSAGES ---
 ${formattedMessages}
 --- END ---`;
 
-    const result = await model.generateContent(prompt);
-    const summary = result.response.text();
+    const { text: summary, tokens } = await this.callLLM(systemPrompt, userPrompt, 1500);
     const durationMs = Date.now() - start;
-    const tokens = result.response.usageMetadata?.totalTokenCount || 0;
+    const providerName = (process.env['AI_PROVIDER'] || 'gemini').toLowerCase();
+    const modelUsed = providerName === 'gemini' ? 'gemini-flash-latest' : (process.env['AI_MODEL'] || providerName);
 
     // Persist to DB (fire and forget style, but we await to get the record)
     await prisma.aiSummary.create({
@@ -149,14 +223,14 @@ ${formattedMessages}
         summary,
         requestedBy: options.requestedBy,
         requesterTag: options.requesterTag,
-        model: 'gemini-flash-latest',
+        model: modelUsed,
       },
     });
 
     return {
       summary,
       messageCount: sorted.length,
-      model: 'gemini-flash-latest',
+      model: modelUsed,
       durationMs,
       tokens,
     };
@@ -194,8 +268,6 @@ ${formattedMessages}
       };
     }
 
-    const model = this.getModel();
-
     // Sort messages oldest → newest for chronological context
     const sorted = [...messages.values()].sort(
       (a, b) => a.createdTimestamp - b.createdTimestamp,
@@ -227,10 +299,8 @@ ${formattedMessages}
       )
       .join('\n');
 
-    const prompt = `You are "Liza", a friendly AI assistant for a mobile gaming Discord guild.
+    const systemPrompt = `You are "Liza", a friendly AI assistant for a mobile gaming Discord guild.
 A user just asked you a question. Please answer their question directly based on the recent chat history and relevant historical context provided below.
-
-Question from user: "${question}"
 
 Rules:
 - CRITICAL: Keep your answer EXTREMELY short (1-2 sentences maximum). Save tokens as much as possible.
@@ -239,7 +309,9 @@ Rules:
 - Answer in English.
 - Use the provided chat histories (Immediate Recent Chat and Relevant Historical Chat) to find the answer.
 - If the user asks a factual question and the chat history does not contain the answer, politely inform the user that you don't see anything about it in the recent messages.
-- Keep member names exactly as they appear in the logs.
+- Keep member names exactly as they appear in the logs.`;
+
+    const userPrompt = `Question from user: "${question}"
 
 --- RELEVANT HISTORICAL CHAT (RAG) ---
 ${formattedRag || 'No relevant historical context found.'}
@@ -249,10 +321,8 @@ ${formattedRag || 'No relevant historical context found.'}
 ${formattedMessages}
 --- END OF RECENT CHAT ---`;
 
-    const result = await model.generateContent(prompt);
-    const answer = result.response.text();
+    const { text: answer, tokens } = await this.callLLM(systemPrompt, userPrompt, 500);
     const durationMs = Date.now() - start;
-    const tokens = result.response.usageMetadata?.totalTokenCount || 0;
 
     return {
       answer,
@@ -261,15 +331,15 @@ ${formattedMessages}
     };
   }
 
-  /**
-   * Generate vector embedding for a given text using text-embedding-004.
-   */
   static async generateEmbedding(text: string): Promise<number[]> {
-    const apiKey = process.env['GEMINI_API_KEY'];
-    if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
-
     // We check if it is a mock command or test. If so, return a mock embedding
     if (text.startsWith('mock-') || process.env.MOCK_AI === 'true') {
+      return new Array(768).fill(0).map(() => Math.random());
+    }
+
+    const apiKey = process.env['GEMINI_API_KEY'];
+    if (!apiKey) {
+      console.warn('⚠️ GEMINI_API_KEY is not configured. Falling back to mock embedding for RAG.');
       return new Array(768).fill(0).map(() => Math.random());
     }
 

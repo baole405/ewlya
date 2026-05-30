@@ -22,7 +22,23 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     new ButtonBuilder()
       .setCustomId('help_view_commands')
       .setLabel('🆘 View Commands')
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('help_points_progression')
+      .setLabel('💎 Points & Raid')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('help_clan_vision')
+      .setLabel('🌌 Clan Vision')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('help_edit_member')
+      .setLabel('📝 Edit Profile')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('help_ask_liza')
+      .setLabel('💬 Ask Liza AI')
+      .setStyle(ButtonStyle.Danger)
   );
 
   if (interaction.channel && interaction.channel.isTextBased()) {
