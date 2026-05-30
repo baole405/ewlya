@@ -95,11 +95,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
 
     if (officialMembers.length > 0) {
+      const isRaid = type.toLowerCase().includes('raid');
       await prisma.memberProgressionStatus.createMany({
         data: officialMembers.map((m) => ({
           progressionCheckId: check.id,
           memberId: m.id,
           isCompleted: false,
+          note: isRaid ? 'Kills: 0' : null
         })),
       });
 

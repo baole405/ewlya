@@ -2,6 +2,8 @@ import { MessageReaction, User, PartialMessageReaction, PartialUser, Events, Act
 import { prisma } from '../../database/prisma';
 import { LoggerService } from '../services/logger.service';
 
+const progressionLocks = new Set<string>();
+
 export const name = Events.MessageReactionAdd;
 
 export async function execute(
@@ -116,6 +118,14 @@ export async function execute(
     // Only allow in designated channels
     if (message.channelId !== devChannelId && message.channelId !== officialChannelId) return;
 
+    // 1. Restrict to grimex only
+    if (!user.username.toLowerCase().includes('grimex')) {
+      const warningMsg = await (message.channel as any).send(`❌ <@${user.id}>, only **grimex** is authorized to verify progressions using the ✅ reaction!`);
+      setTimeout(() => warningMsg.delete().catch(() => {}), 5000);
+      await reaction.users.remove(user.id).catch(() => {});
+      return;
+    }
+
     try {
       const member = await prisma.member.findUnique({ where: { discordId: author.id } });
       if (!member) return;
@@ -125,6 +135,26 @@ export async function execute(
         orderBy: { createdAt: 'desc' }
       });
       if (!activeCheck) return;
+
+      // 2. Prevent duplicate notification due to rapid duplicate events
+      const lockKey = `${activeCheck.id}_${member.id}`;
+      if (progressionLocks.has(lockKey)) return;
+      progressionLocks.add(lockKey);
+
+      const existingStatus = await prisma.memberProgressionStatus.findUnique({
+        where: {
+          progressionCheckId_memberId: {
+            progressionCheckId: activeCheck.id,
+            memberId: member.id
+          }
+        }
+      });
+
+      if (existingStatus && existingStatus.isCompleted) {
+        // Already verified! Don't process or send notification again.
+        progressionLocks.delete(lockKey);
+        return;
+      }
 
       const status = await prisma.memberProgressionStatus.upsert({
         where: {
@@ -164,8 +194,13 @@ export async function execute(
           await (channel as any).send(`🔔 **${member.nickname}**, you've successfully completed the progression check of **${activeCheck.title}**!\n⏰ *Verified at: ${timestamp} (GMT+7)*`);
         }
       }
+      
+      // Release lock after 5 seconds
+      setTimeout(() => progressionLocks.delete(lockKey), 5000);
     } catch (error) {
       console.error('Progression Error:', error);
+      // Ensure lock is released on error too
+      // (Depends on if lockKey is defined, but we are inside the same function block)
     }
     return;
   }

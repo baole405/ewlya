@@ -104,8 +104,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       }
 
       const formatMemberLine = (s: any) => {
-        if (s.note && !s.note.startsWith('Verified by') && !s.note.includes('via reaction')) {
-          return `• ${s.member.nickname} (${s.note})`;
+        let note = s.note;
+        if (note) {
+          if (!check.title.toLowerCase().includes('raid') && note === 'Kills: 0') {
+            note = null;
+          } else if (!check.title.toLowerCase().includes('raid') && note.startsWith('Kills: ')) {
+            note = note.replace('Kills:', 'Floors:');
+          }
+        }
+
+        if (note && !note.startsWith('Verified by') && !note.includes('via reaction')) {
+          return `• ${s.member.nickname} (${note})`;
         }
         return `• ${s.member.nickname}`;
       };

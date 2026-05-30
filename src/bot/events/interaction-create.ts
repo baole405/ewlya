@@ -206,6 +206,8 @@ export async function execute(interaction: Interaction) {
 
         const isCompleted = value >= targetValue;
 
+        const notePrefix = check.title.toLowerCase().includes('raid') ? 'Kills' : 'Floors';
+
         await prisma.memberProgressionStatus.upsert({
           where: {
             progressionCheckId_memberId: {
@@ -216,14 +218,14 @@ export async function execute(interaction: Interaction) {
           update: {
             isCompleted,
             completedAt: isCompleted ? new Date() : null,
-            note: `Kills: ${value}`
+            note: `${notePrefix}: ${value}`
           },
           create: {
             progressionCheckId: check.id,
             memberId: member.id,
             isCompleted,
             completedAt: isCompleted ? new Date() : null,
-            note: `Kills: ${value}`
+            note: `${notePrefix}: ${value}`
           }
         });
 
