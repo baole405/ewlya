@@ -288,7 +288,7 @@ export async function execute(interaction: Interaction) {
     if (customId === 'help_ask_liza') {
       const modal = new ModalBuilder()
         .setCustomId('help_ask_liza_modal')
-        .setTitle('Ask Liza AI');
+        .setTitle("Ask DarkStar's Mascot");
 
       const questionInput = new TextInputBuilder()
         .setCustomId('liza_question_input')
@@ -522,7 +522,7 @@ ${visionContext || 'DarkStar is a mobile gaming clan focused on progression, tea
           await interaction.editReply(answer);
         }
       } catch (err) {
-        console.error('❌ Ask Liza AI Modal Error:', err);
+        console.error("❌ Ask DarkStar's Mascot Modal Error:", err);
         await interaction.editReply('❌ An error occurred while trying to process your request. Please try again later.');
       }
       return;

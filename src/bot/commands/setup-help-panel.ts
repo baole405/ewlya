@@ -37,7 +37,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('help_ask_liza')
-      .setLabel('💬 Ask Liza AI')
+      .setLabel("💬 Ask DarkStar's Mascot")
       .setStyle(ButtonStyle.Danger)
   );
 
