@@ -64,13 +64,16 @@ export class LoggerService {
         } catch {}
       }
 
+      const isNegative = options.points < 0;
+      const pointsFormatted = isNegative ? `${options.points}` : `+${options.points}`;
+
       const embed = new EmbedBuilder()
         .setTitle('📊 Point Log Entry')
-        .setColor(0x8b5cf6) // Purple color matching Image 1
+        .setColor(isNegative ? 0xef4444 : 0x8b5cf6) // Red for deduction, Purple for grant
         .addFields(
           { name: 'Member', value: options.memberNickname, inline: true },
           { name: 'Mission/Stage', value: options.missionText, inline: true },
-          { name: 'Points', value: `+${options.points}`, inline: true },
+          { name: 'Points', value: pointsFormatted, inline: true },
           { name: 'Season', value: options.seasonName, inline: false }
         );
 

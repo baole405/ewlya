@@ -20,13 +20,14 @@ export function serializeCart(items: CartItem[]): string {
  * Returns an array of CartItems.
  */
 export function parseCartFromContent(content: string): CartItem[] {
-  // Matches from "📜 **Pending Rewards:**" until the next double newline or end of string
-  const match = content.match(/📜 \*\*Pending Rewards:\*\*\n([\s\S]*?)(\n\n|$)/);
+  // Matches from "📜 **Pending Rewards:**" or "📜 Pending Rewards:" until the next double newline or end of string
+  const match = content.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
   if (!match) return [];
 
   return match[1].split('\n').reduce<CartItem[]>((acc, line) => {
-    const m = line.match(/• \*\*(.*?)\*\* \(\+(\d+) pts\)/);
-    if (m) acc.push({ mission: m[1], points: parseInt(m[2]) });
+    // Matches bullet (• or -) followed by optional bold (**) then mission name then optional bold (**) then (+X pts)
+    const m = line.match(/^[•\-]\s*(?:\*\*)?(.*?)(?:\*\*)?\s*\(\+(\d+)\s*pts\)/i);
+    if (m) acc.push({ mission: m[1].trim(), points: parseInt(m[2]) });
     return acc;
   }, []);
 }
@@ -46,7 +47,7 @@ export function addItemToCart(pendingList: string, newItem: CartItem): string {
 export function calcTotalFromList(pendingList: string): number {
   if (!pendingList) return 0;
   return pendingList.split('\n').reduce((sum, line) => {
-    const pts = line.match(/\(\+(\d+) pts\)/);
+    const pts = line.match(/\(\+(\d+)\s*pts\)/i);
     return sum + (pts ? parseInt(pts[1]) : 0);
   }, 0);
 }
@@ -86,7 +87,7 @@ export function buildCartBackContent(existingContent: string, prompt: string): s
   const detected = extractDetectedImages(existingContent);
   const prefix = detected ? `${detected}\n\n` : '';
 
-  const pendingMatch = existingContent.match(/📜 \*\*Pending Rewards:\*\*\n([\s\S]*?)(\n\n|$)/);
+  const pendingMatch = existingContent.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
   if (!pendingMatch) return `${prefix}${prompt}`;
 
   const pendingList = pendingMatch[1].trim();

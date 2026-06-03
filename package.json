@@ -15,7 +15,7 @@
     "start:prod:bot": "node dist/bot/main",
     "start:prod:combined": "node dist/combined/main",
     "start:dev:combined": "nest start --entryFile combined/main --watch",
-    "bot:prod": "doppler run -- tsx src/bot/main.ts",
+    "bot:prod": "set IS_LOCAL_BOT=true&& doppler run -- tsx src/bot/main.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

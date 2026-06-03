@@ -121,6 +121,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       );
       if (imageAttachments.size === 0) continue;
 
+      // Skip messages that have been marked as invalid/ignored via cross reactions
+      const hasCrossReaction = msg.reactions.cache.has('❌') || 
+                               msg.reactions.cache.has('✖️') || 
+                               msg.reactions.cache.has('✖');
+      if (hasCrossReaction) continue;
+
       // Fast path: if there's no ✅ reaction cache at all, skip fetch entirely → unverified
       const tickReaction = msg.reactions.cache.get('✅');
       if (!tickReaction) {

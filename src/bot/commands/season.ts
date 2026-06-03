@@ -193,7 +193,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         reason,
         seasonId
       );
-      await interaction.editReply(`✅ Successfully granted **${amount} points** to **${member.nickname}** for a past season.\nReason: ${reason}`);
+      const amountText = amount >= 0 ? `granted **${amount} points**` : `deducted **${Math.abs(amount)} points**`;
+      await interaction.editReply(`✅ Successfully ${amountText} to **${member.nickname}** for a past season.\nReason: ${reason}`);
     } catch (error: any) {
       console.error('Error fixing points:', error);
       await interaction.editReply(`❌ Error: ${error.message}`);
@@ -212,7 +213,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         amount,
         reason
       );
-      await interaction.editReply(`✅ Successfully granted **${amount} points** to **${member.nickname}**.\nReason: ${reason}`);
+      const amountText = amount >= 0 ? `granted **${amount} points**` : `deducted **${Math.abs(amount)} points**`;
+      await interaction.editReply(`✅ Successfully ${amountText} to **${member.nickname}**.\nReason: ${reason}`);
     } catch (error: any) {
       console.error('Error granting points:', error);
       await interaction.editReply(`❌ Error: ${error.message}`);

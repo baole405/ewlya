@@ -216,7 +216,7 @@ export class PointWizardService {
 
     // --- SHOPPING CART LOGIC ---
     const existingContent = interaction.message.content;
-    const pendingMatch = existingContent.match(/📜 \*\*Pending Rewards:\*\*\n([\s\S]*?)(\n\n|$)/);
+    const pendingMatch = existingContent.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
     let pendingList = pendingMatch ? pendingMatch[1].trim() : '';
 
     pendingList = addItemToCart(pendingList, { mission: missionText, points: pointsToAdd });
@@ -462,7 +462,7 @@ export class PointWizardService {
     const originalMessageId = parts[5];
     const indexToEdit = parseInt(interaction.values[0]);
 
-    const pendingMatch = interaction.message.content.match(/📜 \*\*Pending Rewards:\*\*\n([\s\S]*?)(\n\n|$)/);
+    const pendingMatch = interaction.message.content.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
     let pendingList = pendingMatch ? pendingMatch[1].trim() : '';
 
     pendingList = removeItemFromCart(pendingList, indexToEdit);
@@ -485,7 +485,7 @@ export class PointWizardService {
   }
 
   static async handleBackToCart(interaction: ButtonInteraction) {
-    const pendingMatch = interaction.message.content.match(/📜 \*\*Pending Rewards:\*\*\n([\s\S]*?)(\n\n|$)/);
+    const pendingMatch = interaction.message.content.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
     const pendingList = pendingMatch ? pendingMatch[1].trim() : '';
 
     const parts = interaction.customId.split('_');

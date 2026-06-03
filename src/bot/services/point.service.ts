@@ -49,11 +49,15 @@ export class PointService {
     ]);
 
     // Audit Log
+    const isNegative = points < 0;
+    const absPoints = Math.abs(points);
     await LoggerService.logAction(
       client,
-      '🏆 Points Awarded',
-      `Admin **${adminUsername}** awarded **${points}** points to **${member.nickname}**.`,
-      0x22c55e,
+      isNegative ? '📉 Points Deducted' : '🏆 Points Awarded',
+      isNegative
+        ? `Admin **${adminUsername}** deducted **${absPoints}** points from **${member.nickname}**.`
+        : `Admin **${adminUsername}** awarded **${points}** points to **${member.nickname}**.`,
+      isNegative ? 0xef4444 : 0x22c55e,
       [{ name: 'Reason', value: reason }]
     );
 
@@ -109,10 +113,16 @@ export class PointService {
             if (modRole) roleMention = `<@&${modRole.id}>`;
           }
 
+          const isNegative = points < 0;
+          const absPoints = Math.abs(points);
           const alertEmbed = new EmbedBuilder()
             .setColor(0xef4444) // Red alert color
-            .setTitle('🚨 MANUAL POINT GRANT ALERT')
-            .setDescription(`Admin **${adminUsername}** manually added **${points}** points for **${member.nickname}** ${member.discordId ? `(<@${member.discordId}>)` : ''} with reason: \`${reason}\`.`)
+            .setTitle(isNegative ? '🚨 MANUAL POINT DEDUCTION ALERT' : '🚨 MANUAL POINT GRANT ALERT')
+            .setDescription(
+              isNegative
+                ? `Admin **${adminUsername}** manually deducted **${absPoints}** points from **${member.nickname}** ${member.discordId ? `(<@${member.discordId}>)` : ''} with reason: \`${reason}\`.`
+                : `Admin **${adminUsername}** manually added **${points}** points for **${member.nickname}** ${member.discordId ? `(<@${member.discordId}>)` : ''} with reason: \`${reason}\`.`
+            )
             .setTimestamp();
 
           await (channel as any).send({ 

@@ -68,56 +68,70 @@ export async function execute(interaction: Interaction) {
 
   // 2. Handle Button Interactions
   if (interaction.isButton()) {
-    const { customId } = interaction;
+    try {
+      const { customId } = interaction;
 
-    if (customId.startsWith('prog_input_')) {
-      const parts = customId.split('_');
-      const memberId = parts[2];
-      const checkId = parts[3];
-      const originalMessageId = parts[4];
+      if (customId.startsWith('prog_input_')) {
+        const parts = customId.split('_');
+        const memberId = parts[2];
+        const checkId = parts[3];
+        const originalMessageId = parts[4];
 
-      const modal = new ModalBuilder()
-        .setCustomId(`prog_modal_${memberId}_${checkId}_${originalMessageId}`)
-        .setTitle('Enter Progression Value');
+        const modal = new ModalBuilder()
+          .setCustomId(`prog_modal_${memberId}_${checkId}_${originalMessageId}`)
+          .setTitle('Enter Progression Value');
 
-      const killsInput = new TextInputBuilder()
-        .setCustomId('kills_input')
-        .setLabel('Boss Kills / Floors Achieved')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('e.g., 85 or 100')
-        .setRequired(true);
+        const killsInput = new TextInputBuilder()
+          .setCustomId('kills_input')
+          .setLabel('Boss Kills / Floors Achieved')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('e.g., 85 or 100')
+          .setRequired(true);
 
-      const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(killsInput);
-      modal.addComponents(actionRow);
+        const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(killsInput);
+        modal.addComponents(actionRow);
 
-      await interaction.showModal(modal);
+        await interaction.showModal(modal);
+        return;
+      }
+
+      if (customId.startsWith('calc_cat_')) {
+        return await PointWizardService.handleCategorySelection(interaction);
+      }
+      if (customId.startsWith('calc_final_')) {
+        return await PointWizardService.handleFinalSelection(interaction);
+      }
+      if (customId.startsWith('calc_back_')) {
+        return await PointWizardService.handleBack(interaction);
+      }
+      if (customId.startsWith('calc_confirm_save_')) {
+        return await PointWizardService.handleConfirmSave(interaction);
+      }
+      if (customId.startsWith('calc_edit_list_')) {
+        return await PointWizardService.handleEditList(interaction);
+      }
+      if (customId.startsWith('calc_back_to_cart_')) {
+        return await PointWizardService.handleBackToCart(interaction);
+      }
+      if (customId.startsWith('calc_cancel')) {
+        return await PointWizardService.handleCancel(interaction);
+      }
+
+      if (customId.startsWith('announce_send_') || customId === 'sync_view_official') {
+        return await AnnouncementService.handleInteraction(interaction);
+      }
+    } catch (err) {
+      console.error('❌ Error handling Button Interaction:', err);
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: '❌ An error occurred while processing this button interaction.', ephemeral: true });
+        } else {
+          await interaction.followUp({ content: '❌ An error occurred while processing this button interaction.', ephemeral: true });
+        }
+      } catch (replyErr) {
+        console.error('❌ Failed to send button error reply:', replyErr);
+      }
       return;
-    }
-
-    if (customId.startsWith('calc_cat_')) {
-      return PointWizardService.handleCategorySelection(interaction);
-    }
-    if (customId.startsWith('calc_final_')) {
-      return PointWizardService.handleFinalSelection(interaction);
-    }
-    if (customId.startsWith('calc_back_')) {
-      return PointWizardService.handleBack(interaction);
-    }
-    if (customId.startsWith('calc_confirm_save_')) {
-      return PointWizardService.handleConfirmSave(interaction);
-    }
-    if (customId.startsWith('calc_edit_list_')) {
-      return PointWizardService.handleEditList(interaction);
-    }
-    if (customId.startsWith('calc_back_to_cart_')) {
-      return PointWizardService.handleBackToCart(interaction);
-    }
-    if (customId.startsWith('calc_cancel')) {
-      return PointWizardService.handleCancel(interaction);
-    }
-
-    if (customId.startsWith('announce_send_') || customId === 'sync_view_official') {
-      return AnnouncementService.handleInteraction(interaction);
     }
 
     if (customId === 'help_view_commands') {
@@ -157,9 +171,17 @@ export async function execute(interaction: Interaction) {
 
     if (customId === 'help_edit_member') {
       // Fetch member from database
-      const member = await prisma.member.findUnique({
+      let member = await prisma.member.findUnique({
         where: { discordId: interaction.user.id }
       });
+
+      if (!member) {
+        // Await auto-registration to resolve race condition for first-time clicks
+        await MemberService.autoRegister(interaction);
+        member = await prisma.member.findUnique({
+          where: { discordId: interaction.user.id }
+        });
+      }
 
       if (!member) {
         return interaction.reply({
@@ -354,16 +376,30 @@ export async function execute(interaction: Interaction) {
 
   // 3. Handle Select Menu Interactions
   if (interaction.isStringSelectMenu()) {
-    const { customId } = interaction;
+    try {
+      const { customId } = interaction;
 
-    if (customId.startsWith('calc_ldb_stage_')) {
-      return PointWizardService.handleStageSelection(interaction);
-    }
-    if (customId.startsWith('calc_final_ldb_')) {
-      return PointWizardService.handleFinalSelection(interaction);
-    }
-    if (customId.startsWith('calc_item_edit_menu_')) {
-      return PointWizardService.handleSelectItemToEdit(interaction);
+      if (customId.startsWith('calc_ldb_stage_')) {
+        return await PointWizardService.handleStageSelection(interaction);
+      }
+      if (customId.startsWith('calc_final_ldb_')) {
+        return await PointWizardService.handleFinalSelection(interaction);
+      }
+      if (customId.startsWith('calc_item_edit_menu_')) {
+        return await PointWizardService.handleSelectItemToEdit(interaction);
+      }
+    } catch (err) {
+      console.error('❌ Error handling Select Menu Interaction:', err);
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: '❌ An error occurred while processing this select menu interaction.', ephemeral: true });
+        } else {
+          await interaction.followUp({ content: '❌ An error occurred while processing this select menu interaction.', ephemeral: true });
+        }
+      } catch (replyErr) {
+        console.error('❌ Failed to send select menu error reply:', replyErr);
+      }
+      return;
     }
   }
 
@@ -382,7 +418,6 @@ export async function execute(interaction: Interaction) {
     return;
   }
 
-  // 5. Handle Modal Submissions
   if (interaction.isModalSubmit()) {
     const { customId } = interaction;
 
