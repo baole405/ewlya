@@ -6,11 +6,13 @@ import { ProgressionController } from './progression.controller';
 import { ProgressionService } from './progression.service';
 import { DiscordBotModule } from '../../bot/discord-bot.module';
 
+import { BirthdayService } from './birthday.service';
+
 @Module({
   imports: [AuthModule, DiscordBotModule],
   controllers: [FeatureMembersController, ProgressionController],
-  providers: [FeatureMembersService, ProgressionService],
-  exports: [FeatureMembersService, ProgressionService],
+  providers: [FeatureMembersService, ProgressionService, BirthdayService],
+  exports: [FeatureMembersService, ProgressionService, BirthdayService],
 })
 export class FeatureMembersModule {}
 
