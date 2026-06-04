@@ -3,7 +3,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaClient } from '@prisma/client';
 import { DiscordBotService } from '../../bot/discord-bot.service';
 import { EmbedBuilder } from 'discord.js';
-import * as dayjs from 'dayjs';
 
 const prisma = new PrismaClient();
 
@@ -17,9 +16,9 @@ export class BirthdayService {
   async checkBirthdays() {
     this.logger.log('🎂 Running daily birthday check...');
     try {
-      const today = dayjs();
-      const currentDay = today.date();
-      const currentMonth = today.month() + 1; // 1-12
+      const today = new Date();
+      const currentDay = today.getDate();
+      const currentMonth = today.getMonth() + 1; // 1-12
 
       // Fetch all OFFICIAL members who have a birthdate
       const members = await prisma.member.findMany({

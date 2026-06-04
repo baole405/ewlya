@@ -68,9 +68,8 @@ export async function execute(interaction: Interaction) {
 
   // 2. Handle Button Interactions
   if (interaction.isButton()) {
+    const { customId } = interaction;
     try {
-      const { customId } = interaction;
-
       if (customId.startsWith('prog_input_')) {
         const parts = customId.split('_');
         const memberId = parts[2];
