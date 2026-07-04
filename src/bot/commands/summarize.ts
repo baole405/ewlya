@@ -74,7 +74,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       (interaction.channel as TextChannel);
 
     if (!targetChannel || !targetChannel.isTextBased()) {
-      return interaction.editReply('❌ Channel không hợp lệ.');
+      return interaction.editReply('❌ Invalid channel.');
     }
 
     const limitOption = interaction.options.getInteger('limit');

@@ -165,7 +165,7 @@ export class AISummaryService {
         const name = msg.member?.displayName || msg.author.username;
         const content = msg.content || '[no text]';
         const attachments = msg.attachments.size > 0
-          ? ` [${msg.attachments.size} file đính kèm]`
+          ? ` [${msg.attachments.size} attached file(s)]`
           : '';
         return `[${time}] ${name}: ${content}${attachments}`;
       })
