@@ -1,4 +1,4 @@
-import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, ButtonBuilder } from 'discord.js';
+import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { prisma } from '../../database/prisma';
 import { MemberService } from '../services/member.service';
 import { PointWizardService } from '../services/point-wizard.service';
