@@ -33,7 +33,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('help_edit_member')
-      .setLabel('📝 Edit Profile')
+      .setLabel('👤 Profile')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('help_ask_liza')

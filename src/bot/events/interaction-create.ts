@@ -301,7 +301,12 @@ export async function execute(interaction: Interaction) {
       return interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
-    if (customId === 'help_edit_member') {
+    if (customId === 'help_edit_member' || customId === 'profile_view_self') {
+      const isRefresh = customId === 'profile_view_self';
+      if (isRefresh) {
+        await interaction.deferUpdate();
+      }
+
       let member = await prisma.member.findUnique({
         where: { discordId: interaction.user.id }
       });
@@ -314,20 +319,45 @@ export async function execute(interaction: Interaction) {
       }
 
       if (!member) {
-        return interaction.reply({
-          content: '❌ You are not registered in the clan member database yet.',
-          ephemeral: true
-        });
+        const errorContent = '❌ You are not registered in the clan member database yet.';
+        if (isRefresh) {
+          await interaction.followUp({ content: errorContent, ephemeral: true });
+        } else {
+          await interaction.reply({ content: errorContent, ephemeral: true });
+        }
+        return;
+      }
+
+      let birthDateStr = 'Not provided';
+      let birthYearStr = 'Hidden / Not provided';
+
+      if (member.birthdate) {
+        const parts = member.birthdate.split('/');
+        if (parts.length >= 2) {
+          birthDateStr = `${parts[0]}/${parts[1]}`;
+          birthYearStr = parts[2] || 'Hidden / Not provided';
+        } else {
+          birthDateStr = member.birthdate;
+        }
       }
 
       const embed = new EmbedBuilder()
-        .setTitle('⚙️ Edit Your Profile')
-        .setDescription(
-          `Update your profile details or configure privacy settings below:\n\n` +
-          `• **Basic Info**: Update IGN, GS Friend Code, Gender, and Country.\n` +
-          `• **Birthdate & Privacy**: Set DD/MM (for Birthday bot announcements), optional birth year (YYYY), and profile search privacy.`
+        .setTitle(`👤 Your Profile: ${member.nickname || member.ign}`)
+        .setColor(member.status === 'OFFICIAL' ? 0x3b82f6 : 0x10b981)
+        .setThumbnail(member.avatarUrl || interaction.user.displayAvatarURL() || null)
+        .addFields(
+          { name: '🎮 IGN', value: member.ign, inline: true },
+          { name: '🆔 Discord', value: `<@${member.discordId}>`, inline: true },
+          { name: '🎫 GS Friend Code', value: member.gsCode || 'Not provided', inline: true },
+          { name: '🎂 Birthday (DD/MM)', value: birthDateStr, inline: true },
+          { name: '📅 Birth Year', value: birthYearStr, inline: true },
+          { name: '🧬 Gender', value: member.gender || 'Not provided', inline: true },
+          { name: '🗺️ Country', value: member.country || 'Not provided', inline: true },
+          { name: '📊 Clan Status', value: member.status, inline: true },
+          { name: '🔒 Privacy Level', value: member.profilePrivacy || 'PUBLIC', inline: true }
         )
-        .setColor(0x38bdf8);
+        .setFooter({ text: `DarkStar Clan Member Database` })
+        .setTimestamp();
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
@@ -337,10 +367,19 @@ export async function execute(interaction: Interaction) {
         new ButtonBuilder()
           .setCustomId('profile_edit_privacy')
           .setLabel('🔒 Edit Birthdate & Privacy')
-          .setStyle(ButtonStyle.Secondary)
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('profile_view_self')
+          .setLabel('👁️ Refresh Profile')
+          .setStyle(ButtonStyle.Success)
       );
 
-      return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+      if (isRefresh) {
+        await interaction.editReply({ embeds: [embed], components: [row] });
+      } else {
+        await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+      }
+      return;
     }
 
     if (customId === 'profile_edit_basic') {
