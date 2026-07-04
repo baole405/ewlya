@@ -21,11 +21,17 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
 
+    let roleMention = '@mod';
+    if (interaction.guild) {
+      const modRole = interaction.guild.roles.cache.find((r: any) => r.name.toLowerCase() === 'mod');
+      if (modRole) roleMention = `<@&${modRole.id}>`;
+    }
+
     const embed = new EmbedBuilder()
       .setTitle('🚨 MONTHLY MEMBER SYNC ALERT')
       .setColor(0xff0000)
       .setDescription(
-        `Hey @mod, it's time for our monthly member list check for **${currentMonthName}**!\n\n` +
+        `Hey ${roleMention}, it's time for our monthly member list check for **${currentMonthName}**!\n\n` +
         `We currently have **${count} OFFICIAL members** in the database.\n\n` +
         `Please check if there are any changes to the roster. If there are changes, click **Update Members**. If everything is correct, click **Normal**.`
       )
@@ -44,7 +50,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     );
 
     await interaction.editReply({
-      content: `🔔 ALERT @mod`,
+      content: `🔔 ALERT ${roleMention}`,
       embeds: [embed],
       components: [row]
     });

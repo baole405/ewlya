@@ -19,6 +19,23 @@ export class SyncReminderService {
     try {
       const channelId = process.env['ANNOUCEMENTS_ADMIN_CHANNELS_ID'] || '1499036697353261126';
       
+      let roleMention = '@mod';
+      try {
+        const client = this.discordBotService.getClient();
+        if (client) {
+          const channel = await client.channels.fetch(channelId).catch(() => null);
+          if (channel && channel.isTextBased()) {
+            const guild = (channel as any).guild;
+            if (guild) {
+              const modRole = guild.roles.cache.find((r: any) => r.name.toLowerCase() === 'mod');
+              if (modRole) roleMention = `<@&${modRole.id}>`;
+            }
+          }
+        }
+      } catch (e) {
+        this.logger.error('Error fetching role mention:', e);
+      }
+
       const count = await prisma.member.count({
         where: { status: 'OFFICIAL' },
       });
@@ -30,7 +47,7 @@ export class SyncReminderService {
         .setTitle('🚨 MONTHLY MEMBER SYNC ALERT')
         .setColor(0xff0000)
         .setDescription(
-          `Hey @mod, it's time for our monthly member list check for **${currentMonthName}**!\n\n` +
+          `Hey ${roleMention}, it's time for our monthly member list check for **${currentMonthName}**!\n\n` +
           `We currently have **${count} OFFICIAL members** in the database.\n\n` +
           `Please check if there are any changes to the roster. If there are changes, click **Update Members**. If everything is correct, click **Normal**.`
         )
@@ -49,7 +66,7 @@ export class SyncReminderService {
       );
 
       await this.discordBotService.sendMessage(channelId, {
-        content: `🔔 ALERT @mod`,
+        content: `🔔 ALERT ${roleMention}`,
         embeds: [embed],
         components: [row as any]
       });
