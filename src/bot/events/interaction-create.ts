@@ -1,4 +1,4 @@
-import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder } from 'discord.js';
+import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, ButtonBuilder } from 'discord.js';
 import { prisma } from '../../database/prisma';
 import { MemberService } from '../services/member.service';
 import { PointWizardService } from '../services/point-wizard.service';
@@ -118,6 +118,77 @@ export async function execute(interaction: Interaction) {
 
       if (customId.startsWith('announce_send_') || customId === 'sync_view_official') {
         return await AnnouncementService.handleInteraction(interaction);
+      }
+
+      if (customId === 'sync_reminder_update') {
+        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+        if (!adminIds.includes(interaction.user.id)) {
+          return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
+        }
+        await interaction.deferUpdate();
+        try {
+          const guild = interaction.guild;
+          if (!guild) return interaction.followUp({ content: '❌ Must be used in a server.', ephemeral: true });
+
+          const targetRole = guild.roles.cache.find((r: any) => r.name === 'Dark Stars');
+          if (!targetRole) return interaction.followUp({ content: '❌ Please ensure a "Dark Stars" role exists.', ephemeral: true });
+
+          const members = await guild.members.fetch();
+          let officialCount = 0;
+          for (const [id, member] of members) {
+            if (member.user.bot) continue;
+            const isOfficial = member.roles.cache.has(targetRole.id);
+            const isAdmin = adminIds.includes(id);
+            const roleNames = member.roles.cache.map((r: any) => r.name).filter((n: string) => n !== '@everyone');
+
+            await prisma.member.upsert({
+              where: { discordId: id },
+              update: {
+                nickname: member.displayName,
+                avatarUrl: member.user.displayAvatarURL(),
+                status: isOfficial ? 'OFFICIAL' : 'TRIAL',
+                role: isAdmin ? 'ADMIN' : 'MEMBER',
+                roles: roleNames,
+              },
+              create: {
+                discordId: id,
+                nickname: member.displayName,
+                ign: member.displayName,
+                avatarUrl: member.user.displayAvatarURL(),
+                status: isOfficial ? 'OFFICIAL' : 'TRIAL',
+                role: isAdmin ? 'ADMIN' : 'MEMBER',
+                roles: roleNames,
+              },
+            });
+            if (isOfficial) officialCount++;
+          }
+          const embed = new EmbedBuilder().setTitle('✅ Sync Completed').setColor(0x22c55e).setDescription(`Total Official: **${officialCount}**`);
+          const message = interaction.message;
+          const newComponents = message.components.map((row: any) => new ActionRowBuilder<ButtonBuilder>().addComponents(row.components.map((c: any) => ButtonBuilder.from(c).setDisabled(true))));
+          await message.edit({ components: newComponents });
+          await interaction.followUp({ embeds: [embed] });
+        } catch (err) {
+          console.error(err);
+          await interaction.followUp({ content: '❌ Sync failed.', ephemeral: true });
+        }
+        return;
+      }
+
+      if (customId === 'sync_reminder_normal') {
+        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+        if (!adminIds.includes(interaction.user.id)) {
+          return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
+        }
+        await interaction.deferUpdate();
+        try {
+          const message = interaction.message;
+          const newComponents = message.components.map((row: any) => new ActionRowBuilder<ButtonBuilder>().addComponents(row.components.map((c: any) => ButtonBuilder.from(c).setDisabled(true))));
+          const embed = EmbedBuilder.from(message.embeds[0]).setColor(0x22c55e).setFooter({ text: `Verified by ${interaction.user.username} - All Normal` });
+          await message.edit({ embeds: [embed], components: newComponents });
+        } catch (err) {
+          console.error(err);
+        }
+        return;
       }
     } catch (err) {
       console.error('❌ Error handling Button Interaction:', err);

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaClient } from '@prisma/client';
 import { DiscordBotService } from '../../bot/discord-bot.service';
-import { EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 
 const prisma = new PrismaClient();
 
@@ -24,19 +24,31 @@ export class SyncReminderService {
       });
 
       const embed = new EmbedBuilder()
-        .setTitle('📊 Monthly Member Sync Reminder')
-        .setColor(0x0099ff)
+        .setTitle('🚨 MONTHLY MEMBER SYNC ALERT')
+        .setColor(0xff0000)
         .setDescription(
-          `Hey <@&mod>, it's time for our monthly member list check!\n\n` +
+          `Hey @mod, it's time for our monthly member list check!\n\n` +
           `We currently have **${count} OFFICIAL members** in the database.\n\n` +
-          `Please run the \`/sync-members\` command to manually check and update the members list from the server to ensure our database is accurate.`
+          `Please check if there are any changes to the roster. If there are changes, click **Update Members**. If everything is correct, click **Normal**.`
         )
         .setFooter({ text: 'Liza & The DarkStar Team' })
         .setTimestamp();
 
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId('sync_reminder_update')
+          .setLabel('Update Members')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('sync_reminder_normal')
+          .setLabel('Normal (No Change)')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
       await this.discordBotService.sendMessage(channelId, {
-        content: `Attention @mod! Time to sync members.`,
+        content: `🔔 ALERT @mod`,
         embeds: [embed],
+        components: [row as any]
       });
 
       this.logger.log(`✅ Sent monthly sync reminder to channel ${channelId}`);
