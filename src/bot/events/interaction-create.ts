@@ -121,7 +121,7 @@ export async function execute(interaction: Interaction) {
       }
 
       if (customId === 'sync_reminder_update') {
-        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
         if (!adminIds.includes(interaction.user.id)) {
           return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
         }
@@ -162,11 +162,22 @@ export async function execute(interaction: Interaction) {
             });
             if (isOfficial) officialCount++;
           }
-          const embed = new EmbedBuilder().setTitle('✅ Sync Completed').setColor(0x22c55e).setDescription(`Total Official: **${officialCount}**`);
+          
+          const embed = new EmbedBuilder()
+            .setTitle('📋 Member Sync Result - Confirmation Required')
+            .setColor(0xeab308)
+            .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (0/${adminIds.length}):**\n(None yet)`)
+            .setFooter({ text: `Liza & The DarkStar Team | confirm:` })
+            .setTimestamp();
+
+          const confirmBtn = new ButtonBuilder()
+            .setCustomId('sync_reminder_confirm')
+            .setLabel('✅ Confirm')
+            .setStyle(ButtonStyle.Success);
+          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn);
+
           const message = interaction.message;
-          const newComponents = message.components.map((row: any) => new ActionRowBuilder<ButtonBuilder>().addComponents(row.components.map((c: any) => ButtonBuilder.from(c).setDisabled(true))));
-          await message.edit({ components: newComponents });
-          await interaction.followUp({ embeds: [embed] });
+          await message.edit({ embeds: [embed], components: [row] });
         } catch (err) {
           console.error(err);
           await interaction.followUp({ content: '❌ Sync failed.', ephemeral: true });
@@ -175,16 +186,81 @@ export async function execute(interaction: Interaction) {
       }
 
       if (customId === 'sync_reminder_normal') {
-        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
         if (!adminIds.includes(interaction.user.id)) {
           return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
         }
         await interaction.deferUpdate();
         try {
+          const officialCount = await prisma.member.count({ where: { status: 'OFFICIAL' } });
+
+          const embed = new EmbedBuilder()
+            .setTitle('📋 Member Sync Result - Confirmation Required')
+            .setColor(0xeab308)
+            .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (0/${adminIds.length}):**\n(None yet)`)
+            .setFooter({ text: `Liza & The DarkStar Team | confirm:` })
+            .setTimestamp();
+
+          const confirmBtn = new ButtonBuilder()
+            .setCustomId('sync_reminder_confirm')
+            .setLabel('✅ Confirm')
+            .setStyle(ButtonStyle.Success);
+          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn);
+
           const message = interaction.message;
-          const newComponents = message.components.map((row: any) => new ActionRowBuilder<ButtonBuilder>().addComponents(row.components.map((c: any) => ButtonBuilder.from(c).setDisabled(true))));
-          const embed = EmbedBuilder.from(message.embeds[0]).setColor(0x22c55e).setFooter({ text: `Verified by ${interaction.user.username} - All Normal` });
-          await message.edit({ embeds: [embed], components: newComponents });
+          await message.edit({ embeds: [embed], components: [row] });
+        } catch (err) {
+          console.error(err);
+        }
+        return;
+      }
+
+      if (customId === 'sync_reminder_confirm') {
+        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
+        if (!adminIds.includes(interaction.user.id)) {
+          return interaction.reply({ content: '❌ Permission denied. You must be an admin to confirm.', ephemeral: true });
+        }
+        await interaction.deferUpdate();
+        try {
+          const message = interaction.message;
+          const currentEmbed = message.embeds[0];
+          const footerText = currentEmbed.footer?.text || '';
+          
+          // Extract confirmed IDs
+          const confirmMatch = footerText.match(/confirm:(.*)/);
+          let confirmedIds: string[] = [];
+          if (confirmMatch && confirmMatch[1]) {
+            confirmedIds = confirmMatch[1].split(',').filter(id => id);
+          }
+
+          if (confirmedIds.includes(interaction.user.id)) {
+            return interaction.followUp({ content: '⚠️ You have already confirmed.', ephemeral: true });
+          }
+
+          confirmedIds.push(interaction.user.id);
+
+          // Update description
+          const descMatch = currentEmbed.description?.match(/Total OFFICIAL members: \*\*(\d+)\*\*/);
+          const officialCount = descMatch ? descMatch[1] : '?';
+          
+          const confirmNames = confirmedIds.map(id => `<@${id}>`).join('\n');
+
+          const newEmbed = EmbedBuilder.from(currentEmbed)
+            .setFooter({ text: `Liza & The DarkStar Team | confirm:${confirmedIds.join(',')}` });
+
+          if (confirmedIds.length >= adminIds.length) {
+            newEmbed
+              .setTitle('✅ Member Sync - Fully Confirmed')
+              .setColor(0x22c55e)
+              .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (${confirmedIds.length}/${adminIds.length}):**\n${confirmNames}`);
+            
+            const newComponents = message.components.map((row: any) => new ActionRowBuilder<ButtonBuilder>().addComponents(row.components.map((c: any) => ButtonBuilder.from(c).setDisabled(true))));
+            await message.edit({ embeds: [newEmbed], components: newComponents });
+          } else {
+            newEmbed
+              .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (${confirmedIds.length}/${adminIds.length}):**\n${confirmNames}`);
+            await message.edit({ embeds: [newEmbed] });
+          }
         } catch (err) {
           console.error(err);
         }
