@@ -178,9 +178,13 @@ export async function execute(interaction: Interaction) {
 
           const message = interaction.message;
           await message.edit({ embeds: [embed], components: [row] });
-        } catch (err) {
+        } catch (err: any) {
           console.error(err);
-          await interaction.followUp({ content: '❌ Sync failed.', ephemeral: true });
+          if (err.name === 'GatewayRateLimitError' || err.message?.includes('rate limited') || err.message?.includes('Rate limit')) {
+            await interaction.followUp({ content: '⏳ Discord API rate limit reached. Please wait 30-60 seconds before trying to sync again.', ephemeral: true });
+          } else {
+            await interaction.followUp({ content: '❌ Sync failed. Check logs for details.', ephemeral: true });
+          }
         }
         return;
       }
