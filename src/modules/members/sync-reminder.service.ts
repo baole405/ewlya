@@ -4,6 +4,8 @@ import { PrismaClient } from '@prisma/client';
 import { DiscordBotService } from '../../bot/discord-bot.service';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 
+import { performMemberSync, generateConfirmationBoard } from '../../bot/utils/sync-helper';
+
 const prisma = new PrismaClient();
 
 @Injectable()
@@ -20,12 +22,15 @@ export class SyncReminderService {
       const channelId = process.env['ANNOUCEMENTS_ADMIN_CHANNELS_ID'] || '1499036697353261126';
       
       let roleMention = '@mod';
+      const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
+
+      let guild: any = null;
       try {
         const client = this.discordBotService.getClient();
         if (client) {
           const channel = await client.channels.fetch(channelId).catch(() => null);
           if (channel && channel.isTextBased()) {
-            const guild = (channel as any).guild;
+            guild = (channel as any).guild;
             if (guild) {
               const modRole = guild.roles.cache.find((r: any) => r.name.toLowerCase() === 'mod');
               if (modRole) roleMention = `<@&${modRole.id}>`;
@@ -36,39 +41,22 @@ export class SyncReminderService {
         this.logger.error('Error fetching role mention:', e);
       }
 
-      const count = await prisma.member.count({
-        where: { status: 'OFFICIAL' },
-      });
+      if (guild) {
+        try {
+          await performMemberSync(guild, adminIds);
+        } catch (e) {
+          this.logger.error('Error auto-syncing members:', e);
+          // If sync fails (e.g. rate limit), we still show the board with previous DB data
+        }
+      }
 
       const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
-
-
-      const embed = new EmbedBuilder()
-        .setTitle('🚨 MONTHLY MEMBER SYNC ALERT')
-        .setColor(0xff0000)
-        .setDescription(
-          `Hey ${roleMention}, it's time for our monthly member list check for **${currentMonthName}**!\n\n` +
-          `We currently have **${count} OFFICIAL members** in the database.\n\n` +
-          `Please check if there are any changes to the roster. If there are changes, click **Update Members**. If everything is correct, click **Normal**.`
-        )
-        .setFooter({ text: 'Liza & The DarkStar Team' })
-        .setTimestamp();
-
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId('sync_reminder_update')
-          .setLabel('Update Members')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId('sync_reminder_normal')
-          .setLabel('Normal (No Change)')
-          .setStyle(ButtonStyle.Secondary)
-      );
+      const { embed, components } = await generateConfirmationBoard(adminIds, roleMention, currentMonthName);
 
       await this.discordBotService.sendMessage(channelId, {
         content: `🔔 ALERT ${roleMention}`,
         embeds: [embed],
-        components: [row as any]
+        components
       });
 
       this.logger.log(`✅ Sent monthly sync reminder to channel ${channelId}`);

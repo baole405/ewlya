@@ -1,5 +1,6 @@
 import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { prisma } from '../../database/prisma';
+import { performMemberSync, generateConfirmationBoard } from '../utils/sync-helper';
 import { MemberService } from '../services/member.service';
 import { PointWizardService } from '../services/point-wizard.service';
 import { AnnouncementService } from '../services/announcement.service';
@@ -130,89 +131,27 @@ export async function execute(interaction: Interaction) {
           const guild = interaction.guild;
           if (!guild) return interaction.followUp({ content: '❌ Must be used in a server.', ephemeral: true });
 
-          const targetRole = guild.roles.cache.find((r: any) => r.name === 'Dark Stars');
-          if (!targetRole) return interaction.followUp({ content: '❌ Please ensure a "Dark Stars" role exists.', ephemeral: true });
-
-          const members = await guild.members.fetch();
-          let officialCount = 0;
-          for (const [id, member] of members) {
-            if (member.user.bot) continue;
-            const isOfficial = member.roles.cache.has(targetRole.id);
-            const isAdmin = adminIds.includes(id);
-            const roleNames = member.roles.cache.map((r: any) => r.name).filter((n: string) => n !== '@everyone');
-
-            await prisma.member.upsert({
-              where: { discordId: id },
-              update: {
-                nickname: member.displayName,
-                avatarUrl: member.user.displayAvatarURL(),
-                status: isOfficial ? 'OFFICIAL' : 'TRIAL',
-                role: isAdmin ? 'ADMIN' : 'MEMBER',
-                roles: roleNames,
-              },
-              create: {
-                discordId: id,
-                nickname: member.displayName,
-                ign: member.displayName,
-                avatarUrl: member.user.displayAvatarURL(),
-                status: isOfficial ? 'OFFICIAL' : 'TRIAL',
-                role: isAdmin ? 'ADMIN' : 'MEMBER',
-                roles: roleNames,
-              },
-            });
-            if (isOfficial) officialCount++;
+          try {
+            await performMemberSync(guild, adminIds);
+          } catch (err: any) {
+            console.error('Rate limit or fetch error:', err);
+            if (err.name === 'GatewayRateLimitError' || err.message?.includes('rate limited') || err.message?.includes('Rate limit')) {
+              await interaction.followUp({ content: '⏳ Discord API rate limit reached. Please wait 30-60 seconds before trying to sync again.', ephemeral: true });
+              return;
+            } else {
+              await interaction.followUp({ content: '❌ Sync failed. Check logs for details.', ephemeral: true });
+              return;
+            }
           }
-          
-          const embed = new EmbedBuilder()
-            .setTitle('📋 Member Sync Result - Confirmation Required')
-            .setColor(0xeab308)
-            .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (0/${adminIds.length}):**\n(None yet)`)
-            .setFooter({ text: `Liza & The DarkStar Team | confirm:` })
-            .setTimestamp();
 
-          const confirmBtn = new ButtonBuilder()
-            .setCustomId('sync_reminder_confirm')
-            .setLabel('✅ Confirm')
-            .setStyle(ButtonStyle.Success);
-          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn);
+          const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
+          let roleMention = '@mod';
+          const modRole = guild.roles.cache.find((r: any) => r.name.toLowerCase() === 'mod');
+          if (modRole) roleMention = `<@&${modRole.id}>`;
 
+          const { embed, components } = await generateConfirmationBoard(adminIds, roleMention, currentMonthName);
           const message = interaction.message;
-          await message.edit({ embeds: [embed], components: [row] });
-        } catch (err: any) {
-          console.error(err);
-          if (err.name === 'GatewayRateLimitError' || err.message?.includes('rate limited') || err.message?.includes('Rate limit')) {
-            await interaction.followUp({ content: '⏳ Discord API rate limit reached. Please wait 30-60 seconds before trying to sync again.', ephemeral: true });
-          } else {
-            await interaction.followUp({ content: '❌ Sync failed. Check logs for details.', ephemeral: true });
-          }
-        }
-        return;
-      }
-
-      if (customId === 'sync_reminder_normal') {
-        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
-        if (!adminIds.includes(interaction.user.id)) {
-          return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
-        }
-        await interaction.deferUpdate();
-        try {
-          const officialCount = await prisma.member.count({ where: { status: 'OFFICIAL' } });
-
-          const embed = new EmbedBuilder()
-            .setTitle('📋 Member Sync Result - Confirmation Required')
-            .setColor(0xeab308)
-            .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (0/${adminIds.length}):**\n(None yet)`)
-            .setFooter({ text: `Liza & The DarkStar Team | confirm:` })
-            .setTimestamp();
-
-          const confirmBtn = new ButtonBuilder()
-            .setCustomId('sync_reminder_confirm')
-            .setLabel('✅ Confirm')
-            .setStyle(ButtonStyle.Success);
-          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn);
-
-          const message = interaction.message;
-          await message.edit({ embeds: [embed], components: [row] });
+          await message.edit({ embeds: [embed], components });
         } catch (err) {
           console.error(err);
         }
@@ -230,7 +169,6 @@ export async function execute(interaction: Interaction) {
           const currentEmbed = message.embeds[0];
           const footerText = currentEmbed.footer?.text || '';
           
-          // Extract confirmed IDs
           const confirmMatch = footerText.match(/confirm:(.*)/);
           let confirmedIds: string[] = [];
           if (confirmMatch && confirmMatch[1]) {
@@ -243,30 +181,74 @@ export async function execute(interaction: Interaction) {
 
           confirmedIds.push(interaction.user.id);
 
-          // Update description
-          const descMatch = currentEmbed.description?.match(/Total OFFICIAL members: \*\*(\d+)\*\*/);
-          const officialCount = descMatch ? descMatch[1] : '?';
-          
-          const confirmNames = confirmedIds.map(id => `<@${id}>`).join('\n');
-
           const newEmbed = EmbedBuilder.from(currentEmbed)
             .setFooter({ text: `Liza & The DarkStar Team | confirm:${confirmedIds.join(',')}` });
+
+          const confirmNames = confirmedIds.map(id => `<@${id}>`).join('\n');
 
           if (confirmedIds.length >= adminIds.length) {
             newEmbed
               .setTitle('✅ Member Sync - Fully Confirmed')
               .setColor(0x22c55e)
-              .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (${confirmedIds.length}/${adminIds.length}):**\n${confirmNames}`);
+              .setDescription(`✅ All admins have confirmed! Thank you.\n\n**Confirmations (${confirmedIds.length}/${adminIds.length}):**\n${confirmNames}`);
             
-            const newComponents = message.components.map((row: any) => new ActionRowBuilder<ButtonBuilder>().addComponents(row.components.map((c: any) => ButtonBuilder.from(c).setDisabled(true))));
-            await message.edit({ embeds: [newEmbed], components: newComponents });
+            const viewDetailsBtn = new ButtonBuilder()
+              .setCustomId('sync_reminder_view_details')
+              .setLabel('👁️ View Members Details')
+              .setStyle(ButtonStyle.Secondary);
+            const newRow = new ActionRowBuilder<ButtonBuilder>().addComponents(viewDetailsBtn);
+            
+            await message.edit({ embeds: [newEmbed], components: [newRow as any] });
           } else {
-            newEmbed
-              .setDescription(`Total OFFICIAL members: **${officialCount}**\n\n**Confirmations (${confirmedIds.length}/${adminIds.length}):**\n${confirmNames}`);
+            const oldDesc = currentEmbed.description || '';
+            const newDesc = oldDesc.replace(/\*\*Confirmations \(.*\):\*\*\n.*/s, `**Confirmations (${confirmedIds.length}/${adminIds.length}):**\n${confirmNames}`);
+            newEmbed.setDescription(newDesc);
             await message.edit({ embeds: [newEmbed] });
           }
         } catch (err) {
           console.error(err);
+        }
+        return;
+      }
+
+      if (customId === 'sync_reminder_view_details') {
+        const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
+        if (!adminIds.includes(interaction.user.id)) {
+          return interaction.reply({ content: '❌ Permission denied.', ephemeral: true });
+        }
+        await interaction.deferReply({ ephemeral: true });
+        try {
+          const officials = await prisma.member.findMany({
+            where: { status: 'OFFICIAL' },
+          });
+
+          const admins = officials.filter(m => m.role === 'ADMIN' || adminIds.includes(m.discordId));
+          const regulars = officials.filter(m => m.role !== 'ADMIN' && !adminIds.includes(m.discordId));
+
+          let detailsText = '**👑 Admins & Mods:**\n';
+          admins.forEach(a => {
+            detailsText += `- **${a.nickname || a.ign}** (<@${a.discordId}>) - Roles: ${a.roles.join(', ')}\n`;
+          });
+
+          detailsText += '\n**👥 Members:**\n';
+          regulars.forEach(m => {
+            detailsText += `- **${m.nickname || m.ign}** (<@${m.discordId}>) - Roles: ${m.roles.join(', ')}\n`;
+          });
+
+          if (detailsText.length > 4000) {
+            detailsText = detailsText.substring(0, 3950) + '\n... *(List truncated)*';
+          }
+
+          const embed = new EmbedBuilder()
+            .setTitle('📋 Detailed Official Member List')
+            .setColor(0x3b82f6)
+            .setDescription(detailsText)
+            .setTimestamp();
+
+          await interaction.editReply({ embeds: [embed] });
+        } catch (err) {
+          console.error(err);
+          await interaction.editReply({ content: '❌ Failed to load member details.' });
         }
         return;
       }

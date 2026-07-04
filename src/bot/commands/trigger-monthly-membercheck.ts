@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { prisma } from '../../database/prisma';
+import { performMemberSync, generateConfirmationBoard } from '../utils/sync-helper';
 
 export const data = new SlashCommandBuilder()
   .setName('trigger-monthly-membercheck')
@@ -15,44 +16,29 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ ephemeral: false });
 
   try {
-    const count = await prisma.member.count({
-      where: { status: 'OFFICIAL' },
-    });
-
-    const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
-
+    const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
+    
     let roleMention = '@mod';
     if (interaction.guild) {
       const modRole = interaction.guild.roles.cache.find((r: any) => r.name.toLowerCase() === 'mod');
       if (modRole) roleMention = `<@&${modRole.id}>`;
     }
 
-    const embed = new EmbedBuilder()
-      .setTitle('🚨 MONTHLY MEMBER SYNC ALERT')
-      .setColor(0xff0000)
-      .setDescription(
-        `Hey ${roleMention}, it's time for our monthly member list check for **${currentMonthName}**!\n\n` +
-        `We currently have **${count} OFFICIAL members** in the database.\n\n` +
-        `Please check if there are any changes to the roster. If there are changes, click **Update Members**. If everything is correct, click **Normal**.`
-      )
-      .setFooter({ text: 'Liza & The DarkStar Team (TEST TRIGGER)' })
-      .setTimestamp();
+    if (interaction.guild) {
+      try {
+        await performMemberSync(interaction.guild, adminIds);
+      } catch (e) {
+        console.error('Auto sync failed during cheat command:', e);
+      }
+    }
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId('sync_reminder_update')
-        .setLabel('Update Members')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('sync_reminder_normal')
-        .setLabel('Normal (No Change)')
-        .setStyle(ButtonStyle.Secondary)
-    );
+    const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
+    const { embed, components } = await generateConfirmationBoard(adminIds, roleMention, currentMonthName);
 
     await interaction.editReply({
       content: `🔔 ALERT ${roleMention}`,
       embeds: [embed],
-      components: [row]
+      components
     });
 
   } catch (error) {
