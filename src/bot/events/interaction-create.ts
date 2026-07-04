@@ -769,7 +769,7 @@ export async function execute(interaction: Interaction) {
 
         // Validate privacy
         if (!['PUBLIC', 'OFFICIAL', 'PRIVATE'].includes(privacy)) {
-          privacy = 'PUBLIC';
+          return interaction.editReply('❌ Invalid privacy setting. Please enter **PUBLIC**, **OFFICIAL**, or **PRIVATE**.');
         }
 
         // Combine birthdate & birthyear
