@@ -23,11 +23,14 @@ export class SyncReminderService {
         where: { status: 'OFFICIAL' },
       });
 
+      const currentMonthName = new Date().toLocaleString('en-US', { month: 'long' });
+
+
       const embed = new EmbedBuilder()
         .setTitle('🚨 MONTHLY MEMBER SYNC ALERT')
         .setColor(0xff0000)
         .setDescription(
-          `Hey @mod, it's time for our monthly member list check!\n\n` +
+          `Hey @mod, it's time for our monthly member list check for **${currentMonthName}**!\n\n` +
           `We currently have **${count} OFFICIAL members** in the database.\n\n` +
           `Please check if there are any changes to the roster. If there are changes, click **Update Members**. If everything is correct, click **Normal**.`
         )
