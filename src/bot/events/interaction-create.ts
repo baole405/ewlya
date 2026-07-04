@@ -302,13 +302,11 @@ export async function execute(interaction: Interaction) {
     }
 
     if (customId === 'help_edit_member') {
-      // Fetch member from database
       let member = await prisma.member.findUnique({
         where: { discordId: interaction.user.id }
       });
 
       if (!member) {
-        // Await auto-registration to resolve race condition for first-time clicks
         await MemberService.autoRegister(interaction);
         member = await prisma.member.findUnique({
           where: { discordId: interaction.user.id }
@@ -322,19 +320,39 @@ export async function execute(interaction: Interaction) {
         });
       }
 
-      // Check if they are an official member or admin
-      const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
-      const isAdmin = adminIds.includes(interaction.user.id);
-      if (!isAdmin && member.status !== 'OFFICIAL') {
-        return interaction.reply({
-          content: '❌ This profile editing is restricted to Official Clan Members only.',
-          ephemeral: true
-        });
-      }
+      const embed = new EmbedBuilder()
+        .setTitle('⚙️ Edit Your Profile')
+        .setDescription(
+          `Update your profile details or configure privacy settings below:\n\n` +
+          `• **Basic Info**: Update IGN, GS Friend Code, Gender, and Country.\n` +
+          `• **Birthdate & Privacy**: Set DD/MM (for Birthday bot announcements), optional birth year (YYYY), and profile search privacy.`
+        )
+        .setColor(0x38bdf8);
+
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId('profile_edit_basic')
+          .setLabel('📝 Edit Basic Info')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('profile_edit_privacy')
+          .setLabel('🔒 Edit Birthdate & Privacy')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      return interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    }
+
+    if (customId === 'profile_edit_basic') {
+      const member = await prisma.member.findUnique({
+        where: { discordId: interaction.user.id }
+      });
+
+      if (!member) return interaction.reply({ content: '❌ Member not found.', ephemeral: true });
 
       const modal = new ModalBuilder()
-        .setCustomId('member_edit_modal')
-        .setTitle('Edit Member Profile');
+        .setCustomId('profile_basic_modal')
+        .setTitle('Edit Basic Info');
 
       const ignInput = new TextInputBuilder()
         .setCustomId('edit_ign')
@@ -360,14 +378,6 @@ export async function execute(interaction: Interaction) {
         .setValue(member.gender || '')
         .setRequired(false);
 
-      const birthdateInput = new TextInputBuilder()
-        .setCustomId('edit_birthdate')
-        .setLabel('Birthdate (DD/MM/YYYY)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('e.g., 15/08/2005')
-        .setValue(member.birthdate || '')
-        .setRequired(false);
-
       const countryInput = new TextInputBuilder()
         .setCustomId('edit_country')
         .setLabel('Country')
@@ -380,8 +390,65 @@ export async function execute(interaction: Interaction) {
         new ActionRowBuilder<TextInputBuilder>().addComponents(ignInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(gsCodeInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(genderInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(birthdateInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(countryInput)
+      );
+
+      await interaction.showModal(modal);
+      return;
+    }
+
+    if (customId === 'profile_edit_privacy') {
+      const member = await prisma.member.findUnique({
+        where: { discordId: interaction.user.id }
+      });
+
+      if (!member) return interaction.reply({ content: '❌ Member not found.', ephemeral: true });
+
+      const modal = new ModalBuilder()
+        .setCustomId('profile_privacy_modal')
+        .setTitle('Edit Birthdate & Privacy');
+
+      // Parse current birthdate
+      let currentDDMM = '';
+      let currentYYYY = '';
+      if (member.birthdate) {
+        const parts = member.birthdate.split('/');
+        if (parts.length >= 2) {
+          currentDDMM = `${parts[0]}/${parts[1]}`;
+          currentYYYY = parts[2] || '';
+        } else {
+          currentDDMM = member.birthdate;
+        }
+      }
+
+      const birthdateInput = new TextInputBuilder()
+        .setCustomId('edit_birthdate')
+        .setLabel('Birth Date (DD/MM) - Announcements')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., 15/08 (Leave blank = NO Birthday Bot)')
+        .setValue(currentDDMM)
+        .setRequired(false);
+
+      const birthyearInput = new TextInputBuilder()
+        .setCustomId('edit_birthyear')
+        .setLabel('Birth Year (YYYY) - Optional')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g., 2005 (Optional, leave blank to hide)')
+        .setValue(currentYYYY)
+        .setRequired(false);
+
+      const privacyInput = new TextInputBuilder()
+        .setCustomId('edit_privacy')
+        .setLabel('Privacy (PUBLIC / OFFICIAL / PRIVATE)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('PUBLIC (everyone) | OFFICIAL (clan only) | PRIVATE (self/admin)')
+        .setValue(member.profilePrivacy || 'PUBLIC')
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(birthdateInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(birthyearInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(privacyInput)
       );
 
       await interaction.showModal(modal);
@@ -643,13 +710,12 @@ export async function execute(interaction: Interaction) {
       return;
     }
 
-    if (customId === 'member_edit_modal') {
+    if (customId === 'profile_basic_modal') {
       await interaction.deferReply({ ephemeral: true });
       try {
         const ign = interaction.fields.getTextInputValue('edit_ign');
         const gsCode = interaction.fields.getTextInputValue('edit_gs_code');
         const gender = interaction.fields.getTextInputValue('edit_gender');
-        const birthdate = interaction.fields.getTextInputValue('edit_birthdate');
         const country = interaction.fields.getTextInputValue('edit_country');
 
         // Update database
@@ -659,7 +725,6 @@ export async function execute(interaction: Interaction) {
             ign,
             gsCode: gsCode || null,
             gender: gender || null,
-            birthdate: birthdate || null,
             country: country || null,
           }
         });
@@ -667,21 +732,77 @@ export async function execute(interaction: Interaction) {
         await LoggerService.logAction(
           interaction.client,
           '📝 Member Profile Updated',
-          `User **${interaction.user.username}** updated their profile fields.`,
+          `User **${interaction.user.username}** updated their basic profile fields.`,
           0x38bdf8,
           [
             { name: 'IGN', value: ign },
             { name: 'GS Code', value: gsCode || 'None' },
             { name: 'Gender', value: gender || 'None' },
-            { name: 'Birthdate', value: birthdate || 'None' },
             { name: 'Country', value: country || 'None' }
           ]
         );
 
-        await interaction.editReply('✅ Your profile has been updated successfully!');
+        await interaction.editReply('✅ Your profile details have been updated successfully!');
       } catch (err) {
         console.error('❌ Error saving profile update:', err);
         await interaction.editReply('❌ An error occurred while saving your profile update.');
+      }
+      return;
+    }
+
+    if (customId === 'profile_privacy_modal') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const birthdate = interaction.fields.getTextInputValue('edit_birthdate').trim();
+        const birthyear = interaction.fields.getTextInputValue('edit_birthyear').trim();
+        let privacy = interaction.fields.getTextInputValue('edit_privacy').trim().toUpperCase();
+
+        // Validate birthdate (DD/MM)
+        if (birthdate && !/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])$/.test(birthdate)) {
+          return interaction.editReply('❌ Invalid birth date format. Please use **DD/MM** (e.g., `15/08`).');
+        }
+
+        // Validate birth year (YYYY)
+        if (birthyear && !/^\d{4}$/.test(birthyear)) {
+          return interaction.editReply('❌ Invalid birth year. Please use **YYYY** format (e.g., `2005`).');
+        }
+
+        // Validate privacy
+        if (!['PUBLIC', 'OFFICIAL', 'PRIVATE'].includes(privacy)) {
+          privacy = 'PUBLIC';
+        }
+
+        // Combine birthdate & birthyear
+        let dbBirthdate: string | null = null;
+        if (birthdate) {
+          dbBirthdate = birthyear ? `${birthdate}/${birthyear}` : birthdate;
+        }
+
+        // Update database
+        await prisma.member.update({
+          where: { discordId: interaction.user.id },
+          data: {
+            birthdate: dbBirthdate,
+            profilePrivacy: privacy
+          }
+        });
+
+        await LoggerService.logAction(
+          interaction.client,
+          '🔒 Member Privacy Updated',
+          `User **${interaction.user.username}** updated their birthdate and privacy settings.`,
+          0x38bdf8,
+          [
+            { name: 'Birthdate (DD/MM)', value: birthdate || 'None' },
+            { name: 'Birth Year', value: birthyear || 'None' },
+            { name: 'Privacy Mode', value: privacy }
+          ]
+        );
+
+        await interaction.editReply('✅ Your birthdate and privacy settings have been updated successfully!');
+      } catch (err) {
+        console.error('❌ Error saving privacy settings:', err);
+        await interaction.editReply('❌ An error occurred while saving your privacy settings.');
       }
       return;
     }

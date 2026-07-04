@@ -51,6 +51,7 @@ model Member {
   aka       String?   // Biệt danh khác
   status    String    @default("OFFICIAL") // OFFICIAL, TRIAL, FORMER, BANNED
   roles     String[]  @default([])         // Store role names or IDs
+  profilePrivacy String @default("PUBLIC")  // PUBLIC, OFFICIAL_ONLY, PRIVATE
   
   submissions Submission[]
   progression   MemberProgressionStatus[]
