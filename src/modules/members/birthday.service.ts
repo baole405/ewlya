@@ -13,8 +13,12 @@ export class BirthdayService {
   constructor(private readonly discordBotService: DiscordBotService) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
-  async checkBirthdays() {
+  async checkBirthdaysCron() {
     this.logger.log('🎂 Running daily birthday check...');
+    await this.checkBirthdays(true);
+  }
+
+  async checkBirthdays(sendMessages: boolean = true) {
     try {
       const today = new Date();
       const currentDay = today.getDate();
@@ -34,8 +38,8 @@ export class BirthdayService {
         // Parse birthdate which could be "DD/MM/YYYY" or "D/M/YYYY"
         const parts = member.birthdate.split('/');
         if (parts.length >= 2) {
-          const day = parseInt(parts[0], 10);
-          const month = parseInt(parts[1], 10);
+          const day = parseInt(parts[0].trim(), 10);
+          const month = parseInt(parts[1].trim(), 10);
           return day === currentDay && month === currentMonth;
         }
         return false;
@@ -43,18 +47,22 @@ export class BirthdayService {
 
       if (birthdayMembers.length === 0) {
         this.logger.log('ℹ️ No birthdays today.');
-        return;
+        return [];
       }
 
       this.logger.log(`🎉 Found ${birthdayMembers.length} birthdays today!`);
 
-      const channelId = process.env['BIRTHDAY_CHANNEL_ID'] || '1370483716362731630';
-
-      for (const member of birthdayMembers) {
-        await this.sendBirthdayWish(channelId, member.nickname, member.discordId);
+      if (sendMessages) {
+        const channelId = process.env['BIRTHDAY_CHANNEL_ID'] || '1370483716362731630';
+        for (const member of birthdayMembers) {
+          await this.sendBirthdayWish(channelId, member.nickname, member.discordId);
+        }
       }
+      
+      return birthdayMembers;
     } catch (error) {
       this.logger.error('❌ Error checking birthdays:', error);
+      throw error;
     }
   }
 
