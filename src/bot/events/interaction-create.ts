@@ -802,29 +802,50 @@ export async function execute(interaction: Interaction) {
     if (customId === 'profile_privacy_modal') {
       await interaction.deferReply({ ephemeral: true });
       try {
-        const birthdate = interaction.fields.getTextInputValue('edit_birthdate').trim();
-        const birthyear = interaction.fields.getTextInputValue('edit_birthyear').trim();
+        const rawBirthdate = interaction.fields.getTextInputValue('edit_birthdate').trim();
+        const rawBirthyear = interaction.fields.getTextInputValue('edit_birthyear').trim();
         let privacy = interaction.fields.getTextInputValue('edit_privacy').trim().toUpperCase();
-
-        // Validate birthdate (DD/MM)
-        if (birthdate && !/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])$/.test(birthdate)) {
-          return interaction.editReply('❌ Invalid birth date format. Please use **DD/MM** (e.g., `15/08`).');
-        }
-
-        // Validate birth year (YYYY)
-        if (birthyear && !/^\d{4}$/.test(birthyear)) {
-          return interaction.editReply('❌ Invalid birth year. Please use **YYYY** format (e.g., `2005`).');
-        }
 
         // Validate privacy
         if (!['PUBLIC', 'OFFICIAL', 'PRIVATE'].includes(privacy)) {
           return interaction.editReply('❌ Invalid privacy setting. Please enter **PUBLIC**, **OFFICIAL**, or **PRIVATE**.');
         }
 
-        // Combine birthdate & birthyear
+        let normalizedDDMM: string | null = null;
+        let normalizedYYYY: string | null = rawBirthyear || null;
+
+        if (rawBirthdate) {
+          const dateParts = rawBirthdate.split(/[\/\-\.]/).map(p => p.trim());
+          if (dateParts.length >= 2) {
+            const day = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10);
+
+            // Auto-extract YYYY if provided inside birthdate field (e.g. 15/08/2005)
+            if (dateParts.length >= 3 && /^\d{4}$/.test(dateParts[2]) && !normalizedYYYY) {
+              normalizedYYYY = dateParts[2];
+            }
+
+            if (!isNaN(day) && !isNaN(month) && day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+              const dd = String(day).padStart(2, '0');
+              const mm = String(month).padStart(2, '0');
+              normalizedDDMM = `${dd}/${mm}`;
+            } else {
+              return interaction.editReply('❌ Invalid birth date format. Please use **DD/MM** (e.g., `15/08` or `5/8`).');
+            }
+          } else {
+            return interaction.editReply('❌ Invalid birth date format. Please use **DD/MM** (e.g., `15/08` or `5/8`).');
+          }
+        }
+
+        // Validate birth year (YYYY) if provided
+        if (normalizedYYYY && !/^\d{4}$/.test(normalizedYYYY)) {
+          return interaction.editReply('❌ Invalid birth year. Please use a 4-digit **YYYY** format (e.g., `2005`).');
+        }
+
+        // Combine birthdate & birthyear for DB storage
         let dbBirthdate: string | null = null;
-        if (birthdate) {
-          dbBirthdate = birthyear ? `${birthdate}/${birthyear}` : birthdate;
+        if (normalizedDDMM) {
+          dbBirthdate = normalizedYYYY ? `${normalizedDDMM}/${normalizedYYYY}` : normalizedDDMM;
         }
 
         // Update database
@@ -842,16 +863,20 @@ export async function execute(interaction: Interaction) {
           `User **${interaction.user.username}** updated their birthdate and privacy settings.`,
           0x38bdf8,
           [
-            { name: 'Birthdate (DD/MM)', value: birthdate || 'None' },
-            { name: 'Birth Year', value: birthyear || 'None' },
+            { name: 'Birthdate (DD/MM)', value: normalizedDDMM || 'None (Cleared)' },
+            { name: 'Birth Year', value: normalizedYYYY || 'Hidden / None' },
             { name: 'Privacy Mode', value: privacy }
           ]
         );
 
-        await interaction.editReply('✅ Your birthdate and privacy settings have been updated successfully!');
+        const birthdateMsg = normalizedDDMM
+          ? `🎂 Birthdate set to **${normalizedDDMM}**${normalizedYYYY ? ` (Year: ${normalizedYYYY})` : ''}.`
+          : '🎂 Birthdate cleared (no birthday bot announcements).';
+
+        await interaction.editReply(`✅ Your profile privacy & birthday settings have been updated!\n- ${birthdateMsg}\n- 🔒 Privacy Mode: **${privacy}**`);
       } catch (err) {
         console.error('❌ Error saving privacy settings:', err);
-        await interaction.editReply('❌ An error occurred while saving your privacy settings.');
+        await interaction.editReply('❌ An error occurred while saving your privacy settings. Please make sure your profile is registered in the database.');
       }
       return;
     }

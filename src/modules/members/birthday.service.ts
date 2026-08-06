@@ -68,23 +68,32 @@ export class BirthdayService {
 
   async sendBirthdayWish(channelId: string, nickname: string, discordId: string | null) {
     const mention = discordId ? `<@${discordId}>` : `**${nickname}**`;
+    const bannerUrl = process.env['BIRTHDAY_IMAGE_URL'] || 'https://media.giphy.com/media/g5R6Ix5ix2lUY/giphy.gif';
+    const stickerId = process.env['BIRTHDAY_STICKER_ID']?.trim();
     
     const embed = new EmbedBuilder()
-      .setTitle('🎉 Happy Birthday! 🎂')
+      .setTitle('🎂 Happy Birthday from Liza & DarkStar! 🎉')
       .setDescription(
-        `Wishing a fantastic birthday to ${mention}!\n\n` +
-        `May your day be filled with joy, loot, and amazing adventures! 🌟\n` +
-        `Enjoy your special day, from everyone at DarkStar!`
+        `✨ Everyone wish a fantastic happy birthday to ${mention}! 🎁🥳\n\n` +
+        `May your special day be packed with endless joy, epic loot, rare drops, and legendary victories! 🌟💖\n\n` +
+        `*Don't forget to claim your birthday luck in-game today!* 🍰`
       )
       .setColor(0xff69b4) // Hot pink / Birthday color
-      .setThumbnail('https://cdn.discordapp.com/attachments/1370483716362731630/1370483716362731630/birthday_cake.png') // Replace with an actual cake image url if you have one, or remove thumbnail. Using a generic emoji-like color.
-      .setFooter({ text: 'Liza & The DarkStar Team ❤️' });
+      .setThumbnail('https://cdn.discordapp.com/attachments/1370483716362731630/1370483716362731630/birthday_cake.png')
+      .setImage(bannerUrl)
+      .setFooter({ text: 'Liza & The DarkStar Guild Team ❤️' })
+      .setTimestamp();
 
-    await this.discordBotService.sendMessage(channelId, {
-      content: `🎉 Happy Birthday, ${mention}! 🥳`,
+    const messageOptions: any = {
+      content: `🎉 **Happy Birthday, ${mention}!** 🥳🎈`,
       embeds: [embed],
-    });
-    
+    };
+
+    if (stickerId) {
+      messageOptions.stickers = [stickerId];
+    }
+
+    await this.discordBotService.sendMessage(channelId, messageOptions);
     this.logger.log(`✅ Sent birthday wish to ${nickname}`);
   }
 }
