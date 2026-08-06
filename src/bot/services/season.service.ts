@@ -111,7 +111,7 @@ export class SeasonService {
       return new EmbedBuilder()
         .setColor(0x38bdf8)
         .setTitle(`${isPast ? '📁' : '🏆'} Scoreboard: ${seasonName}`)
-        .setDescription('No points were recorded for this season.')
+        .setDescription('No points were recorded for this season yet.')
         .setTimestamp();
     }
 
@@ -142,20 +142,52 @@ export class SeasonService {
       })
       .sort((a, b) => b.points - a.points);
 
-    const list = leaderboardData
+    const totalParticipants = leaderboardData.length;
+    const totalPointsSum = leaderboardData.reduce((sum, d) => sum + d.points, 0);
+    const topLeader = leaderboardData[0];
+
+    // Top 3 Podium Card Highlight
+    let podiumText = '';
+    if (topLeader) {
+      podiumText += `🥇 **1st Place**: 👑 **${topLeader.nickname}** — \`${topLeader.points} pts\`\n`;
+    }
+    if (leaderboardData[1]) {
+      podiumText += `🥈 **2nd Place**: ⚡ **${leaderboardData[1].nickname}** — \`${leaderboardData[1].points} pts\`\n`;
+    }
+    if (leaderboardData[2]) {
+      podiumText += `🥉 **3rd Place**: 🔥 **${leaderboardData[2].nickname}** — \`${leaderboardData[2].points} pts\`\n`;
+    }
+
+    // Contenders Rankings (#4+)
+    const remainingList = leaderboardData
+      .slice(3)
       .map((data, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
-        return `${medal} **${data.nickname}** — ${data.points} pts`;
+        const rank = index + 4;
+        const badge = rank <= 10 ? '🎖️' : '🏅';
+        return `\`#${String(rank).padStart(2, '0')}\` ${badge} **${data.nickname}** — \`${data.points} pts\``;
       })
       .join('\n');
 
-    const truncatedList = list.length > 4000 ? list.substring(0, 4000) + '\n... (and more)' : list;
+    const truncatedRemaining = remainingList.length > 3000
+      ? remainingList.substring(0, 3000) + '\n... (and more)'
+      : remainingList;
+
+    const descriptionText =
+      `✨ **${seasonName.toUpperCase()} ${isPast ? '(ARCHIVED)' : '(LIVE)'}** ✨\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+      `👑 **TOP WARRIORS PODIUM**\n${podiumText}\n` +
+      (truncatedRemaining ? `📊 **RANKINGS & STANDINGS**\n${truncatedRemaining}` : '');
 
     return new EmbedBuilder()
-      .setColor(isPast ? 0x64748b : 0x38bdf8)
-      .setTitle(`${isPast ? '📁 Archived' : '🏆 Live'} Scoreboard: ${seasonName}`)
-      .setDescription(truncatedList)
-      .setFooter({ text: `Total participants: ${leaderboardData.length}` })
+      .setColor(isPast ? 0x64748b : 0x00f0ff) // Sleek Neon Cyan / Slate
+      .setTitle(`🏆 DARKSTAR CLAN — OFFICIAL LEADERBOARD`)
+      .setDescription(descriptionText)
+      .addFields(
+        { name: '👥 Participants', value: `\`${totalParticipants} members\``, inline: true },
+        { name: '💎 Total Points', value: `\`${totalPointsSum} pts\``, inline: true },
+        { name: '👑 Leader', value: topLeader ? `**${topLeader.nickname}**` : 'N/A', inline: true },
+      )
+      .setFooter({ text: `⚡ DarkStar Clan Leaderboards • Season Scoreboard` })
       .setTimestamp();
   }
 
@@ -215,61 +247,7 @@ export class SeasonService {
     }
 
     try {
-      const submissions = await prisma.submission.groupBy({
-        by: ['memberId'],
-        where: { seasonId: activeSeason.id },
-        _sum: { points: true },
-      });
-
-      let leaderboardText = 'No points were recorded this season.';
-
-      if (submissions.length > 0) {
-        const memberIds = submissions.map((s) => s.memberId);
-        const members = await prisma.member.findMany({ where: { id: { in: memberIds } } });
-
-        const discordIds = members.map((m) => m.discordId).filter(Boolean) as string[];
-        const guildMembers = new Map();
-        if (interaction.guild && discordIds.length > 0) {
-          try {
-            const fetched = await interaction.guild.members.fetch({ user: discordIds });
-            fetched.forEach((gm, id) => guildMembers.set(id, gm));
-          } catch (e) {
-            console.error('Could not fetch some guild members for close leaderboard');
-          }
-        }
-
-        const leaderboardData = submissions
-          .map((sub) => {
-            const dbMember = members.find((m) => m.id === sub.memberId);
-            const gm = dbMember?.discordId ? guildMembers.get(dbMember.discordId) : null;
-            const displayName = gm ? gm.displayName : dbMember?.nickname || 'Unknown';
-
-            return {
-              nickname: displayName,
-              points: sub._sum.points || 0,
-            };
-          })
-          .sort((a, b) => b.points - a.points);
-
-        leaderboardText = leaderboardData
-          .map((data, index) => {
-            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
-            return `${medal} **${data.nickname}** — ${data.points} pts`;
-          })
-          .join('\n');
-      }
-
-      const truncatedList =
-        leaderboardText.length > 4000
-          ? leaderboardText.substring(0, 4000) + '\n... (and more)'
-          : leaderboardText;
-
-      const embed = new EmbedBuilder()
-        .setColor(0xfacc15)
-        .setTitle(`🎖️ FINAL SCOREBOARD: ${activeSeason.name}`)
-        .setDescription(truncatedList)
-        .setFooter({ text: `Season Closed by ${interaction.user.username}` })
-        .setTimestamp();
+      const embed = await this.getSeasonScoreEmbed(interaction, activeSeason.id, activeSeason.name, false);
 
       const targetChannelId = process.env['HOF_CHANNEL_ID'] || process.env['TEST_CHANNEL_ID'];
       let postedToHOF = false;

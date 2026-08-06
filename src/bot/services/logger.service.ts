@@ -41,6 +41,7 @@ export class LoggerService {
       points: number;
       seasonName: string;
       adminUsername: string;
+      messageUrl?: string;
     }
   ) {
     const logChannelId = process.env['LOG_OF_LB_POINTS_ID'];
@@ -67,15 +68,27 @@ export class LoggerService {
       const isNegative = options.points < 0;
       const pointsFormatted = isNegative ? `${options.points}` : `+${options.points}`;
 
+      const fields: { name: string; value: string; inline?: boolean }[] = [
+        { name: 'Member', value: options.memberNickname, inline: true },
+        { name: 'Mission/Stage', value: options.missionText, inline: true },
+        { name: 'Points', value: pointsFormatted, inline: true },
+      ];
+
+      if (options.messageUrl) {
+        fields.push({ name: 'Message Link', value: `[🔗 Jump to Post](${options.messageUrl})`, inline: true });
+      }
+
+      fields.push({ name: 'Season', value: options.seasonName, inline: false });
+
       const embed = new EmbedBuilder()
         .setTitle('📊 Point Log Entry')
         .setColor(isNegative ? 0xef4444 : 0x8b5cf6) // Red for deduction, Purple for grant
-        .addFields(
-          { name: 'Member', value: options.memberNickname, inline: true },
-          { name: 'Mission/Stage', value: options.missionText, inline: true },
-          { name: 'Points', value: pointsFormatted, inline: true },
-          { name: 'Season', value: options.seasonName, inline: false }
-        );
+        .addFields(fields)
+        .setTimestamp();
+
+      if (options.messageUrl) {
+        embed.setURL(options.messageUrl);
+      }
 
       if (avatarURL) {
         embed.setAuthor({ name: options.memberNickname, iconURL: avatarURL });

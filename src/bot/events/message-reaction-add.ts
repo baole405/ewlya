@@ -1,6 +1,8 @@
 import { MessageReaction, User, PartialMessageReaction, PartialUser, Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import { prisma } from '../../database/prisma';
 import { LoggerService } from '../services/logger.service';
+import { buildImageHeader } from '../utils/cart.utils';
+import { PointWizardService } from '../services/point-wizard.service';
 
 const progressionLocks = new Set<string>();
 
@@ -257,31 +259,17 @@ export async function execute(
         return;
       }
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`calc_cat_crest_${member.id}_${message.id}`)
-          .setLabel('💎 Crest')
-          .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-          .setCustomId(`calc_cat_ldb_${member.id}_${message.id}`)
-          .setLabel('🏆 Leaderboard')
-          .setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder()
-          .setCustomId(`calc_cat_sreq_${member.id}_${message.id}`)
-          .setLabel("🛠️ SR's EQ")
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`calc_cancel_${message.id}`)
-          .setLabel('❌ Cancel')
-          .setStyle(ButtonStyle.Danger)
-      );
+      const imageAttachments = message.attachments.filter(att => att.contentType?.startsWith('image/'));
+      const imageCount = imageAttachments.size;
+      const imgHeader = buildImageHeader(imageAttachments);
+      const categoryRows = PointWizardService.buildCategoryRows(member.id, message.id);
+      const effectiveTotal = Math.min(imageCount, 5);
 
-      const imageCount = message.attachments.filter(att => att.contentType?.startsWith('image/')).size;
       console.log(`[Wizard] Triggered by ${user.username}. Detected ${imageCount} images from ${author.username}`);
 
       await message.reply({
-        content: `📸 **Detected ${imageCount} image(s)** in this submission.\nHey <@${user.id}>, please select the point category for **${member.nickname}** (Image 1/${imageCount}):`,
-        components: [row],
+        content: `${imgHeader}\nHey <@${user.id}>, please select the point category for **${member.nickname}** (Image 1/${effectiveTotal}):`,
+        components: categoryRows,
         allowedMentions: { repliedUser: false }
       });
 

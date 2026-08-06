@@ -2,6 +2,7 @@ import {
   addItemToCart,
   buildCartBackContent,
   buildCartMessage,
+  buildImageHeader,
   calcTotalFromList,
   CartItem,
   extractDetectedImages,
@@ -43,6 +44,12 @@ describe('Shopping Cart - Point Accumulation', () => {
 
       const lines = cart.split('\n');
       expect(lines).toHaveLength(3);
+    });
+
+    it('should add batch item with count > 1 (e.g. 18x Crest 4+ = 144 pts)', () => {
+      const result = addItemToCart('', { mission: 'CREST: 4+', points: 8 }, 18);
+      expect(result).toBe('• **18x CREST: 4+** (+144 pts)');
+      expect(calcTotalFromList(result)).toBe(144);
     });
   });
 
@@ -93,12 +100,40 @@ describe('Shopping Cart - Point Accumulation', () => {
   });
   
   // ----------------------------------------------------------------
+  // CASE: Build Image Header (under 2000 chars)
+  // ----------------------------------------------------------------
+  describe('buildImageHeader()', () => {
+    it('should format header with up to 5 image links', () => {
+      const attachments = [
+        { url: 'http://img1' },
+        { url: 'http://img2' },
+      ];
+      const header = buildImageHeader(attachments);
+      expect(header).toBe('📸 **Detected 2 image(s)**: [🖼️ Image 1](http://img1) | [🖼️ Image 2](http://img2)');
+    });
+
+    it('should cap displayed links to 5 and add (+X more) for >5 images', () => {
+      const attachments = Array.from({ length: 18 }, (_, i) => ({ url: `http://img${i + 1}` }));
+      const header = buildImageHeader(attachments);
+      expect(header).toContain('📸 **Detected 18 image(s)**:');
+      expect(header).toContain('[🖼️ Image 5](http://img5)');
+      expect(header).not.toContain('[🖼️ Image 6]');
+      expect(header).toContain('*(+13 more)*');
+    });
+  });
+
+  // ----------------------------------------------------------------
   // CASE: Extract detected images
   // ----------------------------------------------------------------
   describe('extractDetectedImages()', () => {
     it('should extract detected images string from content', () => {
       const content = '📸 **Detected 3 image(s)**\n\n🛒 **Point Shopping Cart**';
       expect(extractDetectedImages(content)).toBe('📸 **Detected 3 image(s)**');
+    });
+
+    it('should extract detected images line with image links', () => {
+      const content = '📸 **Detected 2 image(s)**: [🖼️ Image 1](http://img1) | [🖼️ Image 2](http://img2)\n\n🛒 **Point Shopping Cart**';
+      expect(extractDetectedImages(content)).toBe('📸 **Detected 2 image(s)**: [🖼️ Image 1](http://img1) | [🖼️ Image 2](http://img2)');
     });
 
     it('should return null if no detected images string', () => {

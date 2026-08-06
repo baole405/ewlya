@@ -113,6 +113,9 @@ export async function execute(interaction: Interaction) {
       if (customId.startsWith('calc_back_to_cart_')) {
         return await PointWizardService.handleBackToCart(interaction);
       }
+      if (customId.startsWith('calc_qtyapply_')) {
+        return await PointWizardService.handleQuantityChoice(interaction);
+      }
       if (customId.startsWith('calc_cancel')) {
         return await PointWizardService.handleCancel(interaction);
       }
@@ -658,6 +661,13 @@ export async function execute(interaction: Interaction) {
 
   if (interaction.isModalSubmit()) {
     const { customId } = interaction;
+
+    if (customId.startsWith('calc_custom_modal_')) {
+      return await PointWizardService.handleCustomModalSubmit(interaction);
+    }
+    if (customId.startsWith('calc_qty_modal_')) {
+      return await PointWizardService.handleQuantityModalSubmit(interaction);
+    }
 
     if (customId.startsWith('prog_modal_')) {
       const parts = customId.split('_');

@@ -1,5 +1,7 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import { prisma } from '../../database/prisma';
+import { buildImageHeader } from '../utils/cart.utils';
+import { PointWizardService } from '../services/point-wizard.service';
 
 export const data = new SlashCommandBuilder()
   .setName('wizard')
@@ -74,28 +76,26 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       });
     }
 
-    const imageCount = message.attachments.filter(att => att.contentType?.startsWith('image/')).size;
-
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setCustomId(`calc_cat_crest_${member.id}_${message.id}`).setLabel('💎 Crest').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId(`calc_cat_ldb_${member.id}_${message.id}`).setLabel('🏆 Leaderboard').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`calc_cat_sreq_${member.id}_${message.id}`).setLabel("🛠️ SR's EQ").setStyle(ButtonStyle.Success),
-      new ButtonBuilder().setCustomId(`calc_cancel_${message.id}`).setLabel('❌ Cancel').setStyle(ButtonStyle.Danger)
-    );
+    const imageAttachments = message.attachments.filter(att => att.contentType?.startsWith('image/'));
+    const imageCount = imageAttachments.size;
+    const imgHeader = buildImageHeader(imageAttachments);
+    const categoryRows = PointWizardService.buildCategoryRows(member.id, message.id);
+    const effectiveTotal = Math.min(imageCount, 5);
 
     const embed = new EmbedBuilder()
       .setTitle(`Point Wizard for ${member.nickname}`)
-      .setDescription(`📸 **Detected ${imageCount} image(s)** from [this message](${link}).\n\nPlease select the point category for **Image 1/${imageCount}**:`)
+      .setDescription(`${imgHeader}\n\nPlease select the point category for **Image 1/${effectiveTotal}**:`)
       .setColor(0x38bdf8);
 
-    const firstImage = message.attachments.find(att => att.contentType?.startsWith('image/'));
+    const firstImage = imageAttachments.first();
     if (firstImage) {
       embed.setThumbnail(firstImage.url);
     }
 
     await interaction.editReply({
+      content: `${imgHeader}\nPoint Wizard for **${member.nickname}** (Image 1/${effectiveTotal}):`,
       embeds: [embed],
-      components: [row]
+      components: categoryRows
     });
 
   } catch (error) {
