@@ -56,6 +56,7 @@ model Member {
   submissions Submission[]
   progression   MemberProgressionStatus[]
   requirementStatuses MemberRequirementStatus[]
+  minesDrops    MinesDropRecord[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -175,4 +176,32 @@ model ChatMessage {
   createdAt  DateTime               @default(now())
   embedding  Unsupported("vector")?
 }
+
+model MinesDropEvent {
+  id                  String            @id @default(cuid())
+  name                String            @default("Mines Equip Drops Event")
+  status              String            @default("ACTIVE") // ACTIVE, CLOSED, AWARDED
+  firstPoints         Int               @default(150)
+  secondPoints        Int               @default(100)
+  thirdPoints         Int               @default(50)
+  awardedAt           DateTime?
+  leaderboardSnapshot Json?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  records             MinesDropRecord[]
+}
+
+model MinesDropRecord {
+  id        String         @id @default(cuid())
+  eventId   String
+  event     MinesDropEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member         @relation(fields: [memberId], references: [id])
+  messageId String?        @unique
+  count     Int            @default(1)
+  addedBy   String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
 

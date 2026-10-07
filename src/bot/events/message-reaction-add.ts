@@ -3,6 +3,8 @@ import { prisma } from '../../database/prisma';
 import { LoggerService } from '../services/logger.service';
 import { buildImageHeader } from '../utils/cart.utils';
 import { PointWizardService } from '../services/point-wizard.service';
+import { MinesDropService } from '../services/mines-drop.service';
+import { MemberService } from '../services/member.service';
 
 const progressionLocks = new Set<string>();
 
@@ -15,21 +17,39 @@ export async function execute(
   if (reaction.partial) {
     try { await reaction.fetch(); } catch (error) { return; }
   }
+  if (user.partial) {
+    try { user = await user.fetch(); } catch (error) { return; }
+  }
 
-  const message = reaction.message;
+  let message = reaction.message;
+  if (message.partial) {
+    try { message = await message.fetch(); } catch (error) { return; }
+  }
+
   const author = message.author;
+  if (!author || author.bot) return;
+  if (user.bot) return;
+
+  const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(Boolean);
+  const authorizedIds = [...adminIds, '152989780274184192', '517740134440075274'];
+  const guildMember = message.guild?.members.cache.get(user.id) || await message.guild?.members.fetch(user.id).catch(() => null);
+  const isAuthorized =
+    authorizedIds.includes(user.id) ||
+    guildMember?.permissions.has('Administrator') ||
+    (user.username ? user.username.toLowerCase().includes('grimex') : false);
+
+  console.log(`[REACTION ADD] User ${user.username} (${user.id}) reacted with ${reaction.emoji.name} on message ${message.id} in channel ${message.channelId} (authorized: ${isAuthorized})`);
+
+  if (!isAuthorized) return;
 
   // ---------------------------------------------------------
-  // 0. HOF CHANNEL ✅ GUARD — Remove non-bot ✅ reactions
+  // 0. HOF CHANNEL ✅ GUARD — Remove non-bot ✅ reactions (HOF ONLY)
   // ---------------------------------------------------------
   const hofChannelId = process.env['HOF_CHANNEL_ID'];
-  const testChannelId = process.env['TEST_CHANNEL_ID'];
-  const isHofChannel = message.channelId === hofChannelId || message.channelId === testChannelId;
-
   if (
-    isHofChannel &&
+    hofChannelId &&
+    message.channelId === hofChannelId &&
     reaction.emoji.name === '✅' &&
-    !user.bot &&
     user.id !== reaction.client.user?.id
   ) {
     // This is a human reacting ✅ in HOF — remove it immediately
@@ -37,14 +57,7 @@ export async function execute(
     return;
   }
 
-  const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
-  if (!adminIds.includes(user.id)) return;
 
-  if (!author || author.bot) return;
-
-  // ---------------------------------------------------------
-  // 1. PROGRESSION VERIFICATION (🧮)
-  // ---------------------------------------------------------
   if (reaction.emoji.name === '🧮') {
     const devChannelId = process.env['PROGRESSION_CHECK_ID_DEVELOPER'];
     const officialChannelId = process.env['PROGRESSION_CHECK_ID'];
@@ -120,10 +133,11 @@ export async function execute(
     // Only allow in designated channels
     if (message.channelId !== devChannelId && message.channelId !== officialChannelId) return;
 
-    // 1. Restrict to grimex only
-    if (!user.username.toLowerCase().includes('grimex')) {
+    // 1. Restrict to Grimex and authorized Admins (including user ID)
+    const isAuthorized = adminIds.includes(user.id) || user.username.toLowerCase().includes('grimex');
+    if (!isAuthorized) {
       const channel: any = message.channel;
-      const warningMsg = await channel.send(`❌ <@${user.id}>, only **grimex** is authorized to verify progressions using the ✅ reaction!`);
+      const warningMsg = await channel.send(`❌ <@${user.id}>, only authorized Admins are permitted to verify progressions using the ✅ reaction!`);
       setTimeout(() => warningMsg.delete().catch(() => {}), 5000);
       await reaction.users.remove(user.id).catch(() => {});
       return;
@@ -159,6 +173,14 @@ export async function execute(
         return;
       }
 
+      const req = await prisma.progressionRequirement.findFirst({
+        where: { progressionCheckId: activeCheck.id }
+      });
+      const isMines = activeCheck.title.toLowerCase().includes('mine') || activeCheck.title.toLowerCase().includes('floor');
+      const unit = isMines ? 'Floor' : 'Kills';
+      const targetVal = req?.targetValue || (isMines ? '200' : '100');
+      const note = `${unit}: ${targetVal}`;
+
       const status = await prisma.memberProgressionStatus.upsert({
         where: {
           progressionCheckId_memberId: {
@@ -169,14 +191,14 @@ export async function execute(
         update: {
           isCompleted: true,
           completedAt: new Date(),
-          note: 'Verified'
+          note
         },
         create: {
           progressionCheckId: activeCheck.id,
           memberId: member.id,
           isCompleted: true,
           completedAt: new Date(),
-          note: 'Verified'
+          note
         }
       });
 
@@ -275,6 +297,54 @@ export async function execute(
 
     } catch (error) {
       console.error('Points Wizard Error:', error);
+    }
+    return;
+  }
+
+  // ---------------------------------------------------------
+  // 3. MINES EQUIP DROPS TRACKING (✅ or ⛏️)
+  // ---------------------------------------------------------
+  const isMinesEmoji = reaction.emoji.name === '✅' || reaction.emoji.name === '⛏️' || reaction.emoji.name === '⛏';
+  if (isMinesEmoji) {
+    try {
+      const MINES_DROPS_CHANNEL_ID = '1265850153517060096';
+      const minesChannelId = process.env['MINES_DROPS_CHANNEL_ID'] || MINES_DROPS_CHANNEL_ID;
+      const channel = message.channel;
+      const channelName = channel && 'name' in channel ? (channel as any).name : '';
+      const isMinesChannel =
+        message.channelId === minesChannelId ||
+        message.channelId === MINES_DROPS_CHANNEL_ID ||
+        channelName.toLowerCase().includes('mines-drops') ||
+        message.channelId === process.env['TEST_CHANNEL_ID'];
+
+      if (!isMinesChannel) return;
+
+      // Strictly restrict to user (Bahan) and Grimex
+      const MINES_AUTHORIZED_IDS = ['152989780274184192', '517740134440075274'];
+      const isMinesAuthorized =
+        MINES_AUTHORIZED_IDS.includes(user.id) ||
+        (user.username ? user.username.toLowerCase().includes('grimex') : false);
+
+      if (!isMinesAuthorized) {
+        await reaction.users.remove(user.id).catch(() => {});
+        return;
+      }
+
+      // Verify that message contains image/media attachments or embeds
+      const hasMedia = message.attachments.some(att => att.contentType?.startsWith('image/')) || message.attachments.size > 0;
+      if (!hasMedia) return;
+
+      // Ensure member exists
+      const member = await MemberService.ensureMemberExists(author, message.guild);
+
+      // Record drop
+      const result = await MinesDropService.recordReactionDrop(member.id, user.id, message.id);
+      if (result.success) {
+        // Add diamond reaction to indicate verified drop count
+        await message.react('💎').catch(() => null);
+      }
+    } catch (error) {
+      console.error('Mines Drop Reaction Error:', error);
     }
     return;
   }

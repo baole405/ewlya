@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { prisma } from '../../database/prisma';
 
 export const data = new SlashCommandBuilder()
@@ -17,18 +17,15 @@ const ALLOWED_CHANNELS = [
 ];
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  // Enforce channel restrictions
-  if (!ALLOWED_CHANNELS.includes(interaction.channelId)) {
-    return interaction.reply({
-      content: '❌ This command can only be used in <#1179416080528179352> (general) or <#1180532162919936092> (clan-chat).',
-      ephemeral: true
-    });
-  }
+  const isPublicChannel = ALLOWED_CHANNELS.includes(interaction.channelId) ||
+    interaction.channelId === process.env['TEST_CHANNEL_ID'];
 
-  await interaction.deferReply({ ephemeral: false });
+  // If outside main chat channels, make ephemeral to prevent cluttering
+  await interaction.deferReply({ ephemeral: !isPublicChannel });
 
   try {
     const targetUser = interaction.options.getUser('user') || interaction.user;
+    const isSelf = interaction.user.id === targetUser.id;
     
     // Fetch target member profile
     const targetMember = await prisma.member.findUnique({
@@ -47,7 +44,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(id => id);
     const isExecutorAdmin = adminIds.includes(interaction.user.id);
     const isExecutorOfficial = executorMember?.status === 'OFFICIAL';
-    const isSelf = interaction.user.id === targetUser.id;
 
     // Check privacy settings
     const privacy = (targetMember.profilePrivacy || 'PUBLIC').toUpperCase();
@@ -79,7 +75,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     // Build the profile embed
     const embed = new EmbedBuilder()
-      .setTitle(`👤 Member Profile: ${targetMember.nickname || targetMember.ign}`)
+      .setTitle(`👤 ${isSelf ? 'Your Profile' : 'Member Profile'}: ${targetMember.nickname || targetMember.ign}`)
       .setColor(isExecutorOfficial ? 0x3b82f6 : 0x10b981) // blue for official, green for others
       .setThumbnail(targetMember.avatarUrl || targetUser.displayAvatarURL() || null)
       .addFields(
@@ -95,6 +91,25 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       )
       .setFooter({ text: `DarkStar Clan Member Database` })
       .setTimestamp();
+
+    if (isSelf) {
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId('profile_edit_basic')
+          .setLabel('📝 Edit Basic Info')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('profile_edit_privacy')
+          .setLabel('🔒 Edit Birthdate & Privacy')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('profile_view_self')
+          .setLabel('👁️ Refresh Profile')
+          .setStyle(ButtonStyle.Success)
+      );
+
+      return await interaction.editReply({ embeds: [embed], components: [row] });
+    }
 
     await interaction.editReply({ embeds: [embed] });
 

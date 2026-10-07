@@ -22,6 +22,7 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 import * as interactionCreate from './events/interaction-create';
 import * as messageReactionAdd from './events/message-reaction-add';
+import * as messageReactionRemove from './events/message-reaction-remove';
 import * as messageCreate from './events/message-create';
 
 @Injectable()
@@ -44,7 +45,7 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildMembers,
       ],
-      partials: [Partials.Message, Partials.Reaction, Partials.User],
+      partials: [Partials.Message, Partials.Reaction, Partials.User, Partials.Channel],
     });
   }
 
@@ -234,7 +235,7 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    // Reaction (✅ reaction triggers point flow)
+    // Reaction (✅ reaction triggers point flow, ⛏️ reaction triggers mines drops)
     this.client.on(
       Events.MessageReactionAdd,
       async (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => {
@@ -242,6 +243,17 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
           await (messageReactionAdd as any).execute(reaction, user);
         } catch (err) {
           this.logger.error('❌ Error in MessageReactionAdd:', err);
+        }
+      },
+    );
+
+    this.client.on(
+      Events.MessageReactionRemove,
+      async (reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser) => {
+        try {
+          await (messageReactionRemove as any).execute(reaction, user);
+        } catch (err) {
+          this.logger.error('❌ Error in MessageReactionRemove:', err);
         }
       },
     );

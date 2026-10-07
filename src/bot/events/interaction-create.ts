@@ -5,6 +5,8 @@ import { MemberService } from '../services/member.service';
 import { PointWizardService } from '../services/point-wizard.service';
 import { AnnouncementService } from '../services/announcement.service';
 import { LoggerService } from '../services/logger.service';
+import { CommandTrackerService } from '../services/command-tracker.service';
+import { MinesDropService } from '../services/mines-drop.service';
 
 export const name = Events.InteractionCreate;
 
@@ -26,8 +28,9 @@ export async function execute(interaction: Interaction) {
     const member = await prisma.member.findUnique({ where: { discordId: interaction.user.id } });
     const isOfficial = member && member.status === 'OFFICIAL';
 
-    const isMemberCommand = ['progression-now', 'check-status', 'list-members', 'help'].includes(interaction.commandName);
-    const isAdminCommand = !isMemberCommand;
+    const isPublicMemberCommand = ['profile'].includes(interaction.commandName);
+    const isMemberCommand = ['progression', 'list-members', 'check-profile', 'mines-drop', 'leaderboard', 'summarize'].includes(interaction.commandName);
+    const isAdminCommand = !isMemberCommand && !isPublicMemberCommand;
 
     if (isAdminCommand && !isAdmin) {
       return interaction.reply({ content: '❌ This command is restricted to Administrators only.', ephemeral: true });
@@ -48,6 +51,13 @@ export async function execute(interaction: Interaction) {
         value: String(opt.value)
       }))
     ).catch(console.error);
+
+    // Track command usage metrics
+    try {
+      CommandTrackerService.recordUsage(interaction.commandName, interaction.user.id, interaction.user.username);
+    } catch (err) {
+      console.error('⚠️ Failed to record command usage metric:', err);
+    }
 
     try {
       await command.execute(interaction);
@@ -280,23 +290,22 @@ export async function execute(interaction: Interaction) {
         
       if (isAdmin) {
         embed.setDescription('Here are the commands available to Administrators:\n\n' +
+          '**Right-Click > Apps > Award Points** - Quick way to award points to an image submission.\n' +
           '**`/wizard`** - Start the Point Wizard to award points manually via a message link.\n' +
-          '**`/season`** - Manage point seasons (Start/Stop seasons).\n' +
-          '**`/create-check`** - Create a new Progression Check (e.g., Weekly Raids).\n' +
-          '**`/edit-check`** - Edit an existing Progression Check.\n' +
-          '**`/delete-check`** - Delete a Progression Check.\n' +
-          '**`/list-checks`** - View all active checks or details of a specific check.\n' +
-          '**`/postpone-check`** - Mark a member as postponed for a check.\n' +
-          '**`/scan-hof`** - Scan the Hall of Fame channel to bulk award points.\n' +
+          '**`/season`** - Manage point seasons (Create/Close/Reset/View seasons).\n' +
+          '**`/leaderboard`** - View live scoreboard and past season archives.\n' +
+          '**`/progression`** - Unified progression engine (`now`, `status`, `list`, `create`, `edit`, `update`, `complete`, `postpone`, `delete`).\n' +
           '**`/sync-members`** - Sync the member database with current server roles.\n' +
-          '**`/draft-announcement`** - Create an announcement draft.\n' +
-          '**`/setup-help-panel`** - Deploy the help panel to a channel.\n' +
-          '**Right-Click > Apps > Award Points** - Quick way to award points to an image.'
+          '**`/command-stats`** - View command usage metrics and analytics.\n' +
+          '**`/setup-help-panel`** - Deploy the permanent help hub panel to a channel.'
         );
       } else {
         embed.setDescription('Here are the commands available to you:\n\n' +
-          '**`/progression-now`** - Check your current season points and leaderboard standing.\n' +
-          '**`/check-status`** - Check your status for active progression checks (e.g., Weekly Raids).\n' +
+          '**`/leaderboard`** - View current season standings & Top 3 Podium.\n' +
+          '**`/check-profile`** - Check member profile and privacy details.\n' +
+          '**`/progression now`** - Check active progression status and targets.\n' +
+          '**`/progression status`** - View all progression checks overview.\n' +
+          '**`/summarize`** - Use AI to summarize recent channel chat (Official only).\n' +
           '**`/list-members`** - View the member roster.'
         );
       }
@@ -386,11 +395,13 @@ export async function execute(interaction: Interaction) {
     }
 
     if (customId === 'profile_edit_basic') {
-      const member = await prisma.member.findUnique({
+      let member = await prisma.member.findUnique({
         where: { discordId: interaction.user.id }
       });
 
-      if (!member) return interaction.reply({ content: '❌ Member not found.', ephemeral: true });
+      if (!member) {
+        member = await MemberService.ensureMemberExists(interaction.user, interaction.guild);
+      }
 
       const modal = new ModalBuilder()
         .setCustomId('profile_basic_modal')
@@ -440,11 +451,13 @@ export async function execute(interaction: Interaction) {
     }
 
     if (customId === 'profile_edit_privacy') {
-      const member = await prisma.member.findUnique({
+      let member = await prisma.member.findUnique({
         where: { discordId: interaction.user.id }
       });
 
-      if (!member) return interaction.reply({ content: '❌ Member not found.', ephemeral: true });
+      if (!member) {
+        member = await MemberService.ensureMemberExists(interaction.user, interaction.guild);
+      }
 
       const modal = new ModalBuilder()
         .setCustomId('profile_privacy_modal')
@@ -494,6 +507,287 @@ export async function execute(interaction: Interaction) {
       );
 
       await interaction.showModal(modal);
+      return;
+    }
+
+    // ---------------------------------------------------------
+    // MINES AWARD CONFIRMATION BUTTONS
+    // ---------------------------------------------------------
+    if (customId === 'mines_award_confirm') {
+      const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(Boolean);
+      const authorizedIds = [...adminIds, '152989780274184192', '517740134440075274'];
+      if (!authorizedIds.includes(interaction.user.id)) {
+        return interaction.reply({ content: '❌ Only authorized Admins can confirm awarding.', ephemeral: true });
+      }
+
+      await interaction.deferUpdate();
+
+      try {
+        const result = await MinesDropService.awardPrizes(
+          interaction.user.id,
+          interaction.user.username,
+          interaction.client
+        );
+
+        const seasonInfo = result.season
+          ? `Points have been added to Member total points and the active Clan Season: **${result.season.name}**!`
+          : `Points have been added directly to Member total clan points!`;
+
+        const announcementEmbed = new EmbedBuilder()
+          .setTitle(`🎉 ${result.event.name} - Official Winners Announced!`)
+          .setDescription(
+            `The Mines Equip Drops event has officially concluded!\n` +
+            `${seasonInfo}\n\n` +
+            `### 🏆 Hall of Winners\n` +
+            result.winners
+              .map(w => {
+                const medal = w.rank === 1 ? '🥇 1st Place' : w.rank === 2 ? '🥈 2nd Place' : '🥉 3rd Place';
+                const userMention = w.discordId ? `<@${w.discordId}>` : `**${w.nickname}**`;
+                return `**${medal}**: ${userMention}\n> ⛏️ **${w.dropCount}** drops ➔ Awarded **+${w.projectedPoints}** Clan Points!`;
+              })
+              .join('\n\n') +
+            `\n\nCongratulations to our top miners and thank you to everyone who participated!`
+          )
+          .setColor(0x10b981)
+          .setThumbnail(interaction.guild?.iconURL() || null)
+          .setFooter({ text: `Awarded by ${interaction.user.username}` })
+          .setTimestamp();
+
+        // Update the original preview message
+        await interaction.editReply({ embeds: [announcementEmbed], components: [] });
+
+        // Also post announcement to the mines-drops channel for everyone to celebrate
+        const minesChannelId = process.env['MINES_DROPS_CHANNEL_ID'] || '1265850153517060096';
+        const minesChan = await interaction.client.channels.fetch(minesChannelId).catch(() => null);
+        if (minesChan && minesChan.isTextBased()) {
+          await (minesChan as any).send({ embeds: [announcementEmbed] }).catch(() => null);
+        }
+      } catch (err: any) {
+        console.error('Error awarding mines drop prizes:', err);
+        await interaction.editReply({ content: `❌ Failed to award prizes: ${err.message || 'Unknown error'}`, components: [] });
+      }
+      return;
+    }
+
+    if (customId === 'mines_award_cancel') {
+      await interaction.update({
+        content: '❌ Event prize awarding has been cancelled. No points were added.',
+        embeds: [],
+        components: [],
+      });
+      return;
+    }
+
+    // ---------------------------------------------------------
+    // Mines Equip Drops Counter Handlers (dec, inc, cancel, confirm)
+    // ---------------------------------------------------------
+    if (customId.startsWith('mines_cnt_')) {
+      const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim()).filter(Boolean);
+      const authorizedIds = [...adminIds, '152989780274184192', '517740134440075274'];
+      const isAuthorized =
+        authorizedIds.includes(interaction.user.id) ||
+        (interaction.user.username ? interaction.user.username.toLowerCase().includes('grimex') : false);
+
+      if (!isAuthorized) {
+        return interaction.reply({ content: '❌ Only authorized Admins can verify equip drops.', ephemeral: true });
+      }
+
+      const parts = customId.split('_');
+      // Format: mines_cnt_<action>_<memberId>_<count>_<channelId>_<messageId>
+      const action = parts[2]; // 'dec' | 'inc' | 'confirm' | 'cancel'
+      const memberId = parts[3];
+
+      if (action === 'cancel') {
+        await interaction.message.delete().catch(() => {});
+        return;
+      }
+
+      const countStr = parts[4];
+      const channelId = parts.length >= 7 ? parts[5] : (interaction.channelId || '');
+      const messageId = parts.length >= 7 ? parts[6] : parts[5];
+      let count = parseInt(countStr, 10) || 1;
+
+      if (action === 'dec' || action === 'inc') {
+        if (action === 'dec') {
+          count = Math.max(1, count - 1);
+        } else {
+          count = count + 1;
+        }
+
+        const targetMember = await prisma.member.findUnique({ where: { id: memberId } });
+        const memberMention = targetMember?.discordId ? `<@${targetMember.discordId}>` : `**${targetMember?.nickname || 'Member'}**`;
+
+        const messageUrl = channelId && messageId && interaction.guildId
+          ? `https://discord.com/channels/${interaction.guildId}/${channelId}/${messageId}`
+          : undefined;
+
+        const counterEmbed = new EmbedBuilder()
+          .setTitle('⛏️ Mines Equip Drop Counter')
+          .setDescription(
+            `👤 **Member:** ${memberMention} (\`${targetMember?.nickname || 'Member'}\`)\n` +
+            `💎 **Drop Count:** \`${count}\`\n` +
+            (messageUrl ? `🔗 **Source Post:** [View in <#${channelId}>](${messageUrl})\n\n` : '\n') +
+            `Adjust the drop count below and click **Confirm**:`
+          )
+          .setColor(0xf59e0b)
+          .setFooter({ text: `Adjusted by ${interaction.user.username}` })
+          .setTimestamp();
+
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`mines_cnt_dec_${memberId}_${count}_${channelId}_${messageId}`)
+            .setLabel('➖ 1')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(count <= 1),
+          new ButtonBuilder()
+            .setCustomId(`mines_cnt_val_${memberId}_${count}_${channelId}_${messageId}`)
+            .setLabel(`💎 ${count} Drop${count > 1 ? 's' : ''}`)
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setCustomId(`mines_cnt_inc_${memberId}_${count}_${channelId}_${messageId}`)
+            .setLabel('➕ 1')
+            .setStyle(ButtonStyle.Secondary),
+          new ButtonBuilder()
+            .setCustomId(`mines_cnt_confirm_${memberId}_${count}_${channelId}_${messageId}`)
+            .setLabel('✅ Confirm')
+            .setStyle(ButtonStyle.Success),
+          new ButtonBuilder()
+            .setCustomId(`mines_cnt_cancel_${memberId}_0_${channelId}_${messageId}`)
+            .setLabel('❌ Cancel')
+            .setStyle(ButtonStyle.Danger)
+        );
+
+        await interaction.update({ embeds: [counterEmbed], components: [row] });
+        return;
+      }
+
+      if (action === 'confirm') {
+        // 1. Check idempotency: already counted?
+        const existing = await prisma.minesDropRecord.findUnique({
+          where: { messageId },
+        });
+        if (existing) {
+          return interaction.reply({
+            content: `⚠️ This drop screenshot was already recorded! (Record ID: \`${existing.id}\`)`,
+            ephemeral: true,
+          });
+        }
+
+        const targetMember = await prisma.member.findUnique({ where: { id: memberId } });
+        if (!targetMember) {
+          return interaction.reply({ content: '❌ Member not found in database.', ephemeral: true });
+        }
+
+        // 2. Add drops to active event
+        const result = await MinesDropService.addManualDrops(
+          memberId,
+          count,
+          interaction.user.id,
+          `Reaction counter by ${interaction.user.username}`,
+          messageId
+        );
+
+        if (!result.success) {
+          return interaction.reply({ content: '❌ Failed to record drops.', ephemeral: true });
+        }
+
+        // 3. React with ✅ on the original screenshot message in target channel
+        try {
+          const targetChan = await interaction.client.channels.fetch(channelId).catch(() => null);
+          if (targetChan && targetChan.isTextBased()) {
+            const origMsg = await (targetChan as any).messages.fetch(messageId).catch(() => null);
+            if (origMsg) {
+              await origMsg.react('✅').catch(() => {});
+            }
+          }
+        } catch (e) {}
+
+        // 4. Update the card in test channel into the confirmed log embed
+        const messageUrl = channelId && messageId && interaction.guildId
+          ? `https://discord.com/channels/${interaction.guildId}/${channelId}/${messageId}`
+          : undefined;
+
+        let avatarURL: string | null = null;
+        if (targetMember.discordId) {
+          try {
+            const u = await interaction.client.users.fetch(targetMember.discordId);
+            avatarURL = u.displayAvatarURL({ size: 128 });
+          } catch {}
+        }
+
+        const logEmbed = new EmbedBuilder()
+          .setTitle('⛏️ Mines Equip Drop Verified')
+          .setColor(0x10b981)
+          .addFields(
+            { name: 'Member', value: `<@${targetMember.discordId}> (\`${targetMember.nickname}\`)`, inline: true },
+            { name: 'Drops Added', value: `**+${count}** 💎`, inline: true },
+            { name: 'Total Drops', value: `\`${result.totalDrops}\` drops`, inline: true },
+            { name: 'Verified By', value: `<@${interaction.user.id}>`, inline: true },
+          )
+          .setTimestamp();
+
+        if (messageUrl) {
+          logEmbed.addFields({ name: 'Screenshot Post', value: `[🔗 Jump to Screenshot](${messageUrl})`, inline: false });
+          logEmbed.setURL(messageUrl);
+        }
+        if (avatarURL) {
+          logEmbed.setThumbnail(avatarURL);
+        }
+
+        await interaction.update({
+          embeds: [logEmbed],
+          components: [],
+        });
+        return;
+      }
+    }
+
+    if (customId === 'mines_view_ldb') {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const { event, standings, totalDrops, totalParticipants } = await MinesDropService.getLeaderboard();
+
+        const embed = new EmbedBuilder()
+          .setTitle(`⛏️ ${event.name} - Leaderboard`)
+          .setDescription(
+            `**Event Status:** \`${event.status}\`\n` +
+            `**Prizes:** 🥇 1st: **${event.firstPoints}** pts | 🥈 2nd: **${event.secondPoints}** pts | 🥉 3rd: **${event.thirdPoints}** pts\n` +
+            `**Total Drops Recorded:** \`${totalDrops}\` 💎 | **Participants:** \`${totalParticipants}\`\n\n` +
+            `*Admins verify drop screenshots in <#${process.env['MINES_DROPS_CHANNEL_ID'] || '1265850153517060096'}> with ✅ or ⛏️ to count!*`
+          )
+          .setColor(0xf59e0b)
+          .setThumbnail(interaction.guild?.iconURL() || null)
+          .setTimestamp();
+
+        if (standings.length === 0) {
+          embed.addFields({
+            name: '📊 Standings',
+            value: 'No equip drops recorded yet. Head into the Mines and post your drops!',
+          });
+        } else {
+          const lines = standings.slice(0, 15).map(entry => {
+            let badge = `\`#${entry.rank}\``;
+            if (entry.rank === 1) badge = '🥇';
+            else if (entry.rank === 2) badge = '🥈';
+            else if (entry.rank === 3) badge = '🥉';
+
+            const prizeInfo = entry.projectedPoints > 0 ? ` ➔ **+${entry.projectedPoints} pts**` : '';
+            const userTag = entry.discordId ? `<@${entry.discordId}>` : `**${entry.nickname}**`;
+            return `${badge} ${userTag} — **${entry.dropCount}** drops${prizeInfo}`;
+          });
+
+          embed.addFields({
+            name: '🏆 Top Miners',
+            value: lines.join('\n'),
+          });
+        }
+
+        await interaction.editReply({ embeds: [embed] });
+      } catch (err) {
+        console.error('Error in mines_view_ldb button:', err);
+        await interaction.editReply({ content: '❌ Failed to retrieve the leaderboard.' });
+      }
       return;
     }
 
@@ -669,6 +963,118 @@ export async function execute(interaction: Interaction) {
       return await PointWizardService.handleQuantityModalSubmit(interaction);
     }
 
+    // ---------------------------------------------------------
+    // MINES DROP CONTEXT MENU MODAL SUBMIT
+    // ---------------------------------------------------------
+    if (customId.startsWith('mines_modal_')) {
+      const parts = customId.split('_');
+      // Format: mines_modal_<messageId>_<channelId>_<authorId>
+      const messageId = parts[2];
+      const channelId = parts[3];
+      const authorId = parts[4];
+
+      const countStr = interaction.fields.getTextInputValue('drop_count');
+      const count = parseInt(countStr.trim(), 10);
+      const reasonInput = interaction.fields.getTextInputValue('drop_reason');
+      const reason = reasonInput?.trim() || `Verified by ${interaction.user.username}`;
+
+      if (isNaN(count) || count <= 0) {
+        return interaction.reply({
+          content: '❌ Please enter a valid positive number for drop count!',
+          ephemeral: true,
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        const targetUser = await interaction.client.users.fetch(authorId);
+        const member = await MemberService.ensureMemberExists(targetUser, interaction.guild);
+
+        // Record drops
+        const result = await MinesDropService.addManualDrops(
+          member.id,
+          count,
+          interaction.user.id,
+          reason,
+          messageId
+        );
+
+        if (!result.success) {
+          return interaction.editReply({ content: '❌ Failed to record drops in database.' });
+        }
+
+        // React ✅ on target message
+        try {
+          const targetChan = await interaction.client.channels.fetch(channelId).catch(() => null);
+          if (targetChan && targetChan.isTextBased()) {
+            const origMsg = await (targetChan as any).messages.fetch(messageId).catch(() => null);
+            if (origMsg) {
+              await origMsg.react('✅').catch(() => {});
+            }
+          }
+        } catch (e) {}
+
+        // Send log embed to LOG_OF_LB_POINTS_ID & TEST_CHANNEL_ID
+        const targetChannelIds = Array.from(
+          new Set([process.env['LOG_OF_LB_POINTS_ID'], process.env['TEST_CHANNEL_ID']].filter(Boolean) as string[])
+        );
+
+        const messageUrl = channelId && messageId && interaction.guildId
+          ? `https://discord.com/channels/${interaction.guildId}/${channelId}/${messageId}`
+          : undefined;
+
+        let avatarURL: string | null = null;
+        if (member.discordId) {
+          try {
+            const u = await interaction.client.users.fetch(member.discordId);
+            avatarURL = u.displayAvatarURL({ size: 128 });
+          } catch {}
+        }
+
+        const logEmbed = new EmbedBuilder()
+          .setTitle('⛏️ Mines Equip Drop Verified')
+          .setColor(0x10b981)
+          .addFields(
+            { name: 'Member', value: `<@${member.discordId}> (\`${member.nickname}\`)`, inline: true },
+            { name: 'Drops Added', value: `**+${count}** 💎`, inline: true },
+            { name: 'Total Drops', value: `\`${result.totalDrops}\` drops`, inline: true },
+            { name: 'Verified By', value: `<@${interaction.user.id}>`, inline: true },
+          )
+          .setTimestamp();
+
+        if (reasonInput?.trim()) {
+          logEmbed.addFields({ name: 'Note', value: reasonInput.trim(), inline: false });
+        }
+
+        if (messageUrl) {
+          logEmbed.addFields({ name: 'Screenshot Post', value: `[🔗 Jump to Screenshot](${messageUrl})`, inline: false });
+          logEmbed.setURL(messageUrl);
+        }
+        if (avatarURL) {
+          logEmbed.setThumbnail(avatarURL);
+        }
+
+        for (const targetId of targetChannelIds) {
+          try {
+            const logChan = await interaction.client.channels.fetch(targetId).catch(() => null);
+            if (logChan && logChan.isTextBased()) {
+              await (logChan as any).send({ embeds: [logEmbed] }).catch(() => null);
+            }
+          } catch (logErr) {
+            console.error(`Failed to send drop log to channel ${targetId}:`, logErr);
+          }
+        }
+
+        return interaction.editReply({
+          content: `✅ Successfully recorded **+${count}** drop(s) for <@${authorId}>!\n- **New Total:** \`${result.totalDrops}\` drops\n- **Note:** *${reason}*`,
+        });
+      } catch (err: any) {
+        console.error('Error handling mines drop modal submit:', err);
+        return interaction.editReply({ content: `❌ Error: ${err.message || 'Failed to process drop record.'}` });
+      }
+    }
+
     if (customId.startsWith('prog_modal_')) {
       const parts = customId.split('_');
       const memberId = parts[2];
@@ -703,7 +1109,7 @@ export async function execute(interaction: Interaction) {
 
         const isCompleted = value >= targetValue;
 
-        const notePrefix = check.title.toLowerCase().includes('raid') ? 'Kills' : 'Floors';
+        const notePrefix = check.title.toLowerCase().includes('raid') ? 'Kills' : 'Floor';
 
         await prisma.memberProgressionStatus.upsert({
           where: {
@@ -762,6 +1168,8 @@ export async function execute(interaction: Interaction) {
     if (customId === 'profile_basic_modal') {
       await interaction.deferReply({ ephemeral: true });
       try {
+        await MemberService.ensureMemberExists(interaction.user, interaction.guild);
+
         const ign = interaction.fields.getTextInputValue('edit_ign');
         const gsCode = interaction.fields.getTextInputValue('edit_gs_code');
         const gender = interaction.fields.getTextInputValue('edit_gender');
@@ -802,20 +1210,35 @@ export async function execute(interaction: Interaction) {
     if (customId === 'profile_privacy_modal') {
       await interaction.deferReply({ ephemeral: true });
       try {
+        await MemberService.ensureMemberExists(interaction.user, interaction.guild);
+
         const rawBirthdate = interaction.fields.getTextInputValue('edit_birthdate').trim();
         const rawBirthyear = interaction.fields.getTextInputValue('edit_birthyear').trim();
-        let privacy = interaction.fields.getTextInputValue('edit_privacy').trim().toUpperCase();
+        const rawPrivacy = interaction.fields.getTextInputValue('edit_privacy').trim().toLowerCase();
 
-        // Validate privacy
-        if (!['PUBLIC', 'OFFICIAL', 'PRIVATE'].includes(privacy)) {
-          return interaction.editReply('❌ Invalid privacy setting. Please enter **PUBLIC**, **OFFICIAL**, or **PRIVATE**.');
+        // Flexible privacy parser
+        let privacy = 'PUBLIC';
+        if (['private', 'priv', 'riêng tư', 'rieng tu', 'ẩn', 'an', 'hide', 'hidden'].includes(rawPrivacy)) {
+          privacy = 'PRIVATE';
+        } else if (['official', 'clan', 'members', 'thành viên', 'thanh vien', 'official_only'].includes(rawPrivacy)) {
+          privacy = 'OFFICIAL';
+        } else if (['public', 'pub', 'công khai', 'cong khai', 'all', 'tất cả', 'tat ca'].includes(rawPrivacy)) {
+          privacy = 'PUBLIC';
+        } else if (rawPrivacy) {
+          if (rawPrivacy.includes('priv') || rawPrivacy.includes('tư') || rawPrivacy.includes('ẩn')) {
+            privacy = 'PRIVATE';
+          } else if (rawPrivacy.includes('off') || rawPrivacy.includes('clan')) {
+            privacy = 'OFFICIAL';
+          } else {
+            privacy = 'PUBLIC';
+          }
         }
 
         let normalizedDDMM: string | null = null;
         let normalizedYYYY: string | null = rawBirthyear || null;
 
         if (rawBirthdate) {
-          const dateParts = rawBirthdate.split(/[\/\-\.]/).map(p => p.trim());
+          const dateParts = rawBirthdate.split(/[\/\-\.\s]+/).map(p => p.trim()).filter(Boolean);
           if (dateParts.length >= 2) {
             const day = parseInt(dateParts[0], 10);
             const month = parseInt(dateParts[1], 10);

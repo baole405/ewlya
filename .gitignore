@@ -6,4 +6,6 @@ coverage/
 .DS_Store
 # Script chứa Supabase credentials — không được commit
 start-bot-supabase.ps1
-scratch/check_db.sql
+scratch/
+test-birthday.ts
+*.docx

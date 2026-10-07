@@ -7,6 +7,7 @@ import { pathToFileURL } from 'url';
 // Import Events
 import * as interactionCreate from './events/interaction-create';
 import * as messageReactionAdd from './events/message-reaction-add';
+import * as messageReactionRemove from './events/message-reaction-remove';
 import * as messageCreate from './events/message-create';
 import * as ready from './events/ready';
 
@@ -26,7 +27,7 @@ class DarkStarBot {
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildMembers,
       ],
-      partials: [Partials.Message, Partials.Reaction, Partials.User],
+      partials: [Partials.Message, Partials.Reaction, Partials.User, Partials.Channel],
     });
 
     this.initializeCommands();
@@ -57,7 +58,7 @@ class DarkStarBot {
 
   private initializeEvents() {
     // Note: ready is handled separately in start() if needed, but we register it here too
-    const events = [ready, messageReactionAdd, interactionCreate, messageCreate];
+    const events = [ready, messageReactionAdd, messageReactionRemove, interactionCreate, messageCreate];
     
     for (const event of events) {
       const handler = async (...args: any[]) => {
@@ -83,6 +84,7 @@ class DarkStarBot {
     this.client.on('interactionCreate', (i) => (interactionCreate as any).execute(i));
     this.client.on('messageCreate', (m) => (messageCreate as any).execute(m));
     this.client.on('messageReactionAdd', (r, u) => (messageReactionAdd as any).execute(r, u));
+    this.client.on('messageReactionRemove', (r, u) => (messageReactionRemove as any).execute(r, u));
     
     console.log(`📂 Registered 4 core event handlers.`);
   }

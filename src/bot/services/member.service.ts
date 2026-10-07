@@ -3,60 +3,75 @@ import { prisma } from '../../database/prisma';
 
 export class MemberService {
   /**
+   * Ensures a member exists in the database. If not, creates one safely.
+   */
+  static async ensureMemberExists(user: { id: string; username: string; displayAvatarURL?: () => string }, guild?: any) {
+    const existing = await prisma.member.findUnique({
+      where: { discordId: user.id },
+    });
+
+    if (existing) {
+      const avatar = user.displayAvatarURL ? user.displayAvatarURL() : undefined;
+      if (avatar && existing.avatarUrl !== avatar) {
+        await prisma.member.update({
+          where: { discordId: user.id },
+          data: { avatarUrl: avatar },
+        }).catch(() => {});
+      }
+      return existing;
+    }
+
+    // Determine status and role
+    let status = 'TRIAL';
+    let dbRole: 'ADMIN' | 'MEMBER' = 'MEMBER';
+
+    if (guild) {
+      const member = await guild.members.fetch(user.id).catch(() => null);
+      if (member) {
+        const hasRole = member.roles?.cache?.some((r: any) => r.name === 'Dark Stars');
+        if (hasRole) {
+          status = 'OFFICIAL';
+        }
+      }
+    }
+
+    const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
+    if (adminIds.includes(user.id)) {
+      status = 'OFFICIAL';
+      dbRole = 'ADMIN';
+    }
+
+    // Ensure nickname is unique
+    let nickname = user.username;
+    const nicknameCollision = await prisma.member.findUnique({
+      where: { nickname },
+    });
+    if (nicknameCollision) {
+      nickname = `${user.username}_${user.id.slice(-4)}`;
+    }
+
+    const avatarUrl = user.displayAvatarURL ? user.displayAvatarURL() : null;
+
+    return await prisma.member.create({
+      data: {
+        discordId: user.id,
+        nickname,
+        ign: user.username,
+        avatarUrl,
+        status,
+        role: dbRole,
+      },
+    });
+  }
+
+  /**
    * Automatically registers or updates a member in the database when they interact.
    */
   static async autoRegister(interaction: Interaction) {
     if (!interaction.user) return;
 
     try {
-      // Check if member already exists
-      const existing = await prisma.member.findUnique({
-        where: { discordId: interaction.user.id },
-      });
-
-      if (existing) {
-        // Just update basic profile info, preserve status/role
-        await prisma.member.update({
-          where: { discordId: interaction.user.id },
-          data: {
-            nickname: interaction.user.username,
-            avatarUrl: interaction.user.displayAvatarURL(),
-          },
-        });
-        return;
-      }
-
-      // If new, determine status and role based on guild roles and admin list
-      let status = 'TRIAL';
-      let dbRole: 'ADMIN' | 'MEMBER' = 'MEMBER';
-
-      const guild = interaction.guild;
-      if (guild) {
-        const member = await guild.members.fetch(interaction.user.id).catch(() => null);
-        if (member) {
-          const hasRole = member.roles.cache.some(r => r.name === 'Dark Stars');
-          if (hasRole) {
-            status = 'OFFICIAL';
-          }
-        }
-      }
-
-      const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
-      if (adminIds.includes(interaction.user.id)) {
-        status = 'OFFICIAL';
-        dbRole = 'ADMIN';
-      }
-
-      await prisma.member.create({
-        data: {
-          discordId: interaction.user.id,
-          nickname: interaction.user.username,
-          ign: interaction.user.username,
-          avatarUrl: interaction.user.displayAvatarURL(),
-          status,
-          role: dbRole,
-        },
-      });
+      await this.ensureMemberExists(interaction.user, interaction.guild);
     } catch (err) {
       console.error('❌ Failed to auto-register member:', err);
     }
