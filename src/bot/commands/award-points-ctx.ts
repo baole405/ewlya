@@ -1,6 +1,6 @@
 import { ContextMenuCommandBuilder, ApplicationCommandType, MessageContextMenuCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
 import { prisma } from '../../database/prisma';
-import { buildImageHeader } from '../utils/cart.utils';
+import { buildMediaHeader, extractMessageMedia } from '../utils/cart.utils';
 import { PointWizardService } from '../services/point-wizard.service';
 
 export const data = new ContextMenuCommandBuilder()
@@ -36,10 +36,10 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       return interaction.editReply({ content: '❌ You can only award points to actual members.' });
     }
 
-    // 3. Image Restriction
-    const hasImage = message.attachments.some(att => att.contentType?.startsWith('image/'));
-    if (!hasImage) {
-      return interaction.editReply({ content: '❌ You can only award points for messages with image attachments.' });
+    // 3. Media Restriction (Image or Video)
+    const media = extractMessageMedia(message);
+    if (!media.images.length && !media.videos.length) {
+      return interaction.editReply({ content: '❌ No image or video attachments/links found.' });
     }
 
     // 4. Duplicate Prevention (Check if Bot already reacted with ✅)
@@ -49,7 +49,7 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       const users = await tickReaction.users.fetch();
       if (users.has(interaction.client.user?.id || '')) {
         return interaction.editReply({
-          content: '❌ This image has already been processed. If you want to fix it, please use `/season fix old-season`.'
+          content: '❌ Already processed. Use `/season fix old-season` to edit past points.'
         });
       }
     }
@@ -71,36 +71,25 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       const monthName = msgDate.toLocaleString('en-US', { month: 'long' });
       const year = msgDate.getFullYear();
       return interaction.editReply({ 
-        content: `❌ **Error:** No season found for **${monthName} ${year}**. Please create a season for this period first.`
+        content: `❌ No active season for **${monthName} ${year}**.`
       });
     }
 
-    // 2. Find Member in DB
+    // 6. Find Member in DB
     const member = await prisma.member.findUnique({ where: { discordId: author.id } });
     if (!member) {
-      return interaction.editReply({ content: `❌ Member <@${author.id}> is not registered in the system.` });
+      return interaction.editReply({ content: `❌ Member <@${author.id}> not found in database.` });
     }
 
-    // 3. Send Ephemeral Point Wizard
-    const imageAttachments = message.attachments.filter(att => att.contentType?.startsWith('image/'));
-    const imageCount = imageAttachments.size;
-    const imgHeader = buildImageHeader(imageAttachments);
+    // 7. Send Ephemeral Menu
+    const mediaHeader = buildMediaHeader(media);
     const categoryRows = PointWizardService.buildCategoryRows(member.id, message.id);
-    const effectiveTotal = Math.min(imageCount, 5);
-
-    const embed = new EmbedBuilder()
-      .setTitle(`Point Wizard for ${member.nickname}`)
-      .setDescription(`${imgHeader}\n\nPlease select the point category for **Image 1/${effectiveTotal}**:`)
-      .setColor(0x38bdf8);
-
-    const firstImage = imageAttachments.first();
-    if (firstImage) {
-      embed.setThumbnail(firstImage.url);
-    }
+    const content = mediaHeader
+      ? `Target: **${member.nickname}**\n${mediaHeader}\n\nSelect category:`
+      : `Target: **${member.nickname}**\n\nSelect category:`;
 
     await interaction.editReply({
-      content: `${imgHeader}\nPoint Wizard for **${member.nickname}** (Image 1/${effectiveTotal}):`,
-      embeds: [embed],
+      content,
       components: categoryRows
     });
 

@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import { prisma } from '../../database/prisma';
-import { buildImageHeader } from '../utils/cart.utils';
+import { buildMediaHeader, extractMessageMedia } from '../utils/cart.utils';
 import { PointWizardService } from '../services/point-wizard.service';
 
 export const data = new SlashCommandBuilder()
@@ -48,14 +48,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       return interaction.editReply({ content: '❌ You can only award points to actual members.' });
     }
 
-    const hasImage = message.attachments.some(att => att.contentType?.startsWith('image/'));
-    if (!hasImage) {
-      return interaction.editReply({ content: '❌ This message does not contain any images.' });
+    const media = extractMessageMedia(message);
+    if (!media.images.length && !media.videos.length) {
+      return interaction.editReply({ content: '❌ No image or video attachments/links found in that message.' });
     }
 
     const member = await prisma.member.findUnique({ where: { discordId: author.id } });
     if (!member) {
-      return interaction.editReply({ content: `❌ Member <@${author.id}> is not registered in the system.` });
+      return interaction.editReply({ content: `❌ Member <@${author.id}> not found in database.` });
     }
 
     // 2. Find the season that covers the message date
@@ -72,29 +72,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       const monthName = msgDate.toLocaleString('en-US', { month: 'long' });
       const year = msgDate.getFullYear();
       return interaction.editReply({ 
-        content: `❌ **Error:** No season found for **${monthName} ${year}**. Please create a season for this period first.`
+        content: `❌ No active season for **${monthName} ${year}**.`
       });
     }
 
-    const imageAttachments = message.attachments.filter(att => att.contentType?.startsWith('image/'));
-    const imageCount = imageAttachments.size;
-    const imgHeader = buildImageHeader(imageAttachments);
+    const mediaHeader = buildMediaHeader(media);
     const categoryRows = PointWizardService.buildCategoryRows(member.id, message.id);
-    const effectiveTotal = Math.min(imageCount, 5);
-
-    const embed = new EmbedBuilder()
-      .setTitle(`Point Wizard for ${member.nickname}`)
-      .setDescription(`${imgHeader}\n\nPlease select the point category for **Image 1/${effectiveTotal}**:`)
-      .setColor(0x38bdf8);
-
-    const firstImage = imageAttachments.first();
-    if (firstImage) {
-      embed.setThumbnail(firstImage.url);
-    }
+    const content = mediaHeader
+      ? `Target: **${member.nickname}**\n${mediaHeader}\n\nSelect category:`
+      : `Target: **${member.nickname}**\n\nSelect category:`;
 
     await interaction.editReply({
-      content: `${imgHeader}\nPoint Wizard for **${member.nickname}** (Image 1/${effectiveTotal}):`,
-      embeds: [embed],
+      content,
       components: categoryRows
     });
 

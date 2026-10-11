@@ -1,6 +1,6 @@
 /**
- * Pure utility functions for the Point Shopping Cart.
- * These functions are fully isolated from Discord/DB and can be unit tested directly.
+ * Pure utility functions for Point Awarding & Media Detection.
+ * Isolated from Discord client / DB for testability.
  */
 
 export interface CartItem {
@@ -8,42 +8,186 @@ export interface CartItem {
   points: number;
 }
 
+export interface DetectedMedia {
+  images: Array<{ url: string; name?: string }>;
+  videos: Array<{ url: string; name?: string }>;
+}
+
 /**
- * Serializes a list of cart items into a markdown string stored in the Discord message.
+ * Extracts both images and videos from a Discord message (attachments and media links).
+ */
+export function extractMessageMedia(message: { attachments?: any; content?: string }): DetectedMedia {
+  const images: Array<{ url: string; name?: string }> = [];
+  const videos: Array<{ url: string; name?: string }> = [];
+
+  // 1. Attachments
+  if (message.attachments) {
+    const list = Array.from(message.attachments.values ? message.attachments.values() : message.attachments);
+    for (const att of list as any[]) {
+      const contentType = (att.contentType || '').toLowerCase();
+      const name = (att.name || '').toLowerCase();
+
+      if (contentType.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(name)) {
+        images.push({ url: att.url, name: att.name });
+      } else if (contentType.startsWith('video/') || /\.(mp4|mov|webm|m4v|mkv)$/i.test(name)) {
+        videos.push({ url: att.url, name: att.name });
+      }
+    }
+  }
+
+  // 2. Links in message content
+  if (message.content) {
+    const urlRegex = /(https?:\/\/[^\s<]+)/gi;
+    const urls = message.content.match(urlRegex) || [];
+    for (const u of urls) {
+      if (images.some(img => img.url === u) || videos.some(vid => vid.url === u)) continue;
+      if (/(youtube\.com|youtu\.be|streamable\.com|medal\.tv|twitch\.tv|tiktok\.com|\.mp4|\.mov|\.webm)/i.test(u)) {
+        videos.push({ url: u });
+      } else if (/\.(png|jpe?g|webp|gif)($|\?)/i.test(u)) {
+        images.push({ url: u });
+      }
+    }
+  }
+
+  return { images, videos };
+}
+
+/**
+ * Builds a minimalist, professional media header line.
+ * Example: "Media: [🖼️ 1](url) • [🖼️ 2](url) • [🎥 Video](url)"
+ */
+export function buildMediaHeader(media: DetectedMedia | Array<{ url: string }> | any): string {
+  let images: Array<{ url: string }> = [];
+  let videos: Array<{ url: string }> = [];
+
+  if (Array.isArray(media)) {
+    images = media;
+  } else if (media && (Array.isArray(media.images) || Array.isArray(media.videos))) {
+    images = media.images || [];
+    videos = media.videos || [];
+  } else if (media?.values) {
+    images = Array.from(media.values());
+  }
+
+  const parts: string[] = [];
+
+  const maxImages = 5;
+  images.slice(0, maxImages).forEach((img, idx) => {
+    parts.push(`[🖼️ ${idx + 1}](${img.url})`);
+  });
+  if (images.length > maxImages) {
+    parts.push(`*(+${images.length - maxImages} more)*`);
+  }
+
+  const maxVideos = 3;
+  videos.slice(0, maxVideos).forEach((vid, idx) => {
+    const label = videos.length === 1 ? '🎥 Video' : `🎥 Video ${idx + 1}`;
+    parts.push(`[${label}](${vid.url})`);
+  });
+  if (videos.length > maxVideos) {
+    parts.push(`*(+${videos.length - maxVideos} more)*`);
+  }
+
+  if (parts.length === 0) return '';
+  return `Media: ${parts.join(' • ')}`;
+}
+
+/**
+ * Legacy alias for buildMediaHeader to maintain backward compatibility.
+ */
+export function buildImageHeader(imageAttachments: any): string {
+  return buildMediaHeader(imageAttachments);
+}
+
+/**
+ * Extracts target member line (e.g. "Target: **Name**") from message content.
+ */
+export function extractTargetLine(content: string): string | null {
+  const match = content.match(/Target:\s*\*\*[^*]+\*\*/i);
+  return match ? match[0].trim() : null;
+}
+
+/**
+ * Extracts media header line ("Media: ...") or legacy detected images header.
+ */
+export function extractMediaHeader(content: string): string | null {
+  const mediaMatch = content.match(/Media:\s*[^\n]+/i);
+  if (mediaMatch) return mediaMatch[0].trim();
+  const legacyMatch = content.match(/📸 \*\*Detected \d+ image\(s\)\*\*(?:[^\n]*)/);
+  if (legacyMatch) return legacyMatch[0].trim();
+  return null;
+}
+
+/**
+ * Legacy alias for extractMediaHeader.
+ */
+export function extractDetectedImages(content: string): string | null {
+  return extractMediaHeader(content);
+}
+
+/**
+ * Extracts total media count detected from the message header.
+ */
+export function extractTotalImages(content: string): number {
+  const mediaMatch = content.match(/Media:\s*([^\n]+)/i);
+  if (mediaMatch) {
+    const links = mediaMatch[1].match(/\[.*?\]\(.*?\)/g);
+    const moreMatch = mediaMatch[1].match(/\(\+(\d+)\s*more\)/i);
+    const extra = moreMatch ? parseInt(moreMatch[1], 10) : 0;
+    return (links ? links.length : 0) + extra;
+  }
+  const legacy = content.match(/📸 \*\*Detected (\d+) image\(s\)\*\*/);
+  return legacy ? parseInt(legacy[1], 10) : 0;
+}
+
+/**
+ * Serializes a list of cart items into a clean markdown bullet list.
  */
 export function serializeCart(items: CartItem[]): string {
   return items.map(i => `• **${i.mission}** (+${i.points} pts)`).join('\n');
 }
 
 /**
- * Parses the pending rewards block from a Discord message content string.
- * Returns an array of CartItems.
+ * Parses awarded items from Discord message content.
+ * Robust regex matching bullet points `• ... (+X pts)`.
  */
 export function parseCartFromContent(content: string): CartItem[] {
-  // Matches from "📜 **Pending Rewards:**" or "📜 Pending Rewards:" until the next double newline or end of string
-  const match = content.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
-  if (!match) return [];
+  if (!content) return [];
+  const lines = content.split('\n');
+  const items: CartItem[] = [];
 
-  return match[1].split('\n').reduce<CartItem[]>((acc, line) => {
-    // Matches bullet (• or -) followed by optional bold (**) then optional (Nx ) then mission name then optional bold (**) then (+X pts)
-    const m = line.match(/^[•\-]\s*(?:\*\*)?(?:(\d+)x\s+)?(.*?)(?:\*\*)?\s*\(\+(\d+)\s*pts\)/i);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const m = trimmed.match(/^[•\-]\s*(?:\*\*)?(?:(\d+)x\s+)?(.*?)(?:\*\*)?\s*\(\+(\d+)\s*pts\)/i);
     if (m) {
       const qty = m[1] ? parseInt(m[1], 10) : 1;
-      acc.push({ mission: m[2].trim(), points: parseInt(m[3], 10) });
+      const mission = m[2].trim();
+      const points = parseInt(m[3], 10);
+      items.push({ mission, points });
     }
-    return acc;
-  }, []);
+  }
+
+  return items;
 }
 
 /**
- * Calculates the total number of images already processed in the shopping cart (sums quantities like 4x, 1x).
+ * Extracts the pending bullet lines from existing message content.
+ */
+export function getPendingListFromContent(content: string): string {
+  if (!content) return '';
+  const lines = content.split('\n');
+  const bulletLines = lines.filter(l => /^[•\-]\s*(?:\*\*)?(?:(\d+)x\s+)?(.*?)(?:\*\*)?\s*\(\+(\d+)\s*pts\)/i.test(l.trim()));
+  return bulletLines.join('\n').trim();
+}
+
+/**
+ * Calculates total number of items already processed (sums up 1x, 4x, etc.).
  */
 export function countProcessedImages(content: string): number {
-  const match = content.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
-  if (!match) return 0;
-
-  return match[1].split('\n').reduce((sum, line) => {
-    const m = line.match(/^[•\-]\s*(?:\*\*)?(?:(\d+)x\s+)?/i);
+  if (!content) return 0;
+  const lines = content.split('\n');
+  return lines.reduce((sum, line) => {
+    const m = line.trim().match(/^[•\-]\s*(?:\*\*)?(?:(\d+)x\s+)?/i);
     if (!line.trim() || !line.includes('(+')) return sum;
     const qty = m && m[1] ? parseInt(m[1], 10) : 1;
     return sum + qty;
@@ -51,8 +195,7 @@ export function countProcessedImages(content: string): number {
 }
 
 /**
- * Adds a new item to the existing pending list string and returns the updated string.
- * Supports optional count (e.g. 18x item for batch awarding).
+ * Adds a new item to the existing pending list string.
  */
 export function addItemToCart(pendingList: string, newItem: CartItem, count: number = 1): string {
   const effectiveCount = Math.max(1, count);
@@ -63,82 +206,51 @@ export function addItemToCart(pendingList: string, newItem: CartItem, count: num
 }
 
 /**
- * Calculates the total points from a pending list string.
+ * Calculates total points from a list string.
  */
 export function calcTotalFromList(pendingList: string): number {
   if (!pendingList) return 0;
   return pendingList.split('\n').reduce((sum, line) => {
     const pts = line.match(/\(\+(\d+)\s*pts\)/i);
-    return sum + (pts ? parseInt(pts[1]) : 0);
+    return sum + (pts ? parseInt(pts[1], 10) : 0);
   }, 0);
 }
 
 /**
- * Builds a safe image header string that caps displayed links to 5 images max
- * to prevent exceeding Discord's 2000-character message limit.
- */
-export function buildImageHeader(imageAttachments: Array<{ url: string }> | any): string {
-  const list = Array.from(imageAttachments?.values ? imageAttachments.values() : (imageAttachments || []));
-  const count = list.length;
-  if (count === 0) return '📸 **Detected 0 image(s)**';
-
-  const maxDisplay = 5;
-  const displayed = list.slice(0, maxDisplay);
-  const links = displayed
-    .map((att: any, idx: number) => `[🖼️ Image ${idx + 1}](${att.url})`)
-    .join(' | ');
-
-  const remaining = count - maxDisplay;
-  const moreText = remaining > 0 ? ` *(+${remaining} more)*` : '';
-
-  return `📸 **Detected ${count} image(s)**: ${links}${moreText}`;
-}
-
-/**
- * Extracts the "Detected X image(s)" string from a message content if it exists.
- */
-export function extractDetectedImages(content: string): string | null {
-  const match = content.match(/📸 \*\*Detected \d+ image\(s\)\*\*(?:[^\n]*)/);
-  return match ? match[0].trim() : null;
-}
-
-/**
- * Extracts the total number of images detected from the message content.
- */
-export function extractTotalImages(content: string): number {
-  const match = content.match(/📸 \*\*Detected (\d+) image\(s\)\*\*/);
-  return match ? parseInt(match[1]) : 0;
-}
-
-/**
- * Builds the full Discord message content for the Shopping Cart.
+ * Builds the clean, minimal review content (no amateur "shopping cart" wording).
  */
 export function buildCartMessage(pendingList: string, existingContent?: string): string {
   const total = calcTotalFromList(pendingList);
-  const detected = existingContent ? extractDetectedImages(existingContent) : null;
-  const prefix = detected ? `${detected}\n\n` : '';
+  const targetLine = existingContent ? extractTargetLine(existingContent) : null;
+  const mediaLine = existingContent ? extractMediaHeader(existingContent) : null;
 
-  return `${prefix}🛒 **Point Shopping Cart**\n\n📜 **Pending Rewards:**\n${pendingList.trim()}\n\n**Total Points to award: ${total}**\n*Click Confirm to save to Database.*`;
+  const headerParts = [targetLine, mediaLine].filter(Boolean);
+  const prefix = headerParts.length > 0 ? `${headerParts.join('\n')}\n\n` : '';
+
+  return `${prefix}${pendingList.trim()}\n\n**Total: +${total} pts**`;
 }
 
 /**
- * Builds a message that preserves existing cart data while prompting for the next category.
- * Used when the Admin clicks "Add More" to go back to the category menu.
+ * Builds a prompt message while preserving header and existing awarded items.
  */
 export function buildCartBackContent(existingContent: string, prompt: string): string {
-  const detected = extractDetectedImages(existingContent);
-  const prefix = detected ? `${detected}\n\n` : '';
+  const targetLine = extractTargetLine(existingContent);
+  const mediaLine = extractMediaHeader(existingContent);
+  const pendingList = getPendingListFromContent(existingContent);
 
-  const pendingMatch = existingContent.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
-  if (!pendingMatch) return `${prefix}${prompt}`;
+  const headerParts = [targetLine, mediaLine].filter(Boolean);
+  const prefix = headerParts.length > 0 ? `${headerParts.join('\n')}\n\n` : '';
 
-  const pendingList = pendingMatch[1].trim();
+  if (!pendingList) {
+    return `${prefix}${prompt}`;
+  }
+
   const total = calcTotalFromList(pendingList);
-  return `${prefix}🛒 **Point Shopping Cart** *(${total} pts so far)*\n\n📜 **Pending Rewards:**\n${pendingList}\n\n${prompt}`;
+  return `${prefix}${pendingList}\n**Total: +${total} pts**\n\n${prompt}`;
 }
 
 /**
- * Removes an item from the pending list by its index (0-based).
+ * Removes an item from the pending list by its 0-based index.
  */
 export function removeItemFromCart(pendingList: string, index: number): string {
   const lines = pendingList.trim().split('\n');

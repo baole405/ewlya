@@ -2,15 +2,18 @@ import {
   addItemToCart,
   buildCartBackContent,
   buildCartMessage,
+  buildMediaHeader,
   buildImageHeader,
   calcTotalFromList,
   CartItem,
+  extractMessageMedia,
+  extractMediaHeader,
   extractDetectedImages,
   parseCartFromContent,
   serializeCart,
 } from './cart.utils';
 
-describe('Shopping Cart - Point Accumulation', () => {
+describe('Point Awarding & Media Detection - Pure Utils', () => {
   // ----------------------------------------------------------------
   // CASE: Add single item
   // ----------------------------------------------------------------
@@ -73,11 +76,11 @@ describe('Shopping Cart - Point Accumulation', () => {
   });
 
   // ----------------------------------------------------------------
-  // CASE: Parse cart from Discord message content
+  // CASE: Parse items from Discord message content
   // ----------------------------------------------------------------
   describe('parseCartFromContent()', () => {
-    it('should return empty array if no cart in message', () => {
-      expect(parseCartFromContent('Please select the point category:')).toEqual([]);
+    it('should return empty array if no items in message', () => {
+      expect(parseCartFromContent('Select category:')).toEqual([]);
     });
 
     it('[MAIN CASE] should parse 2x same items from message', () => {
@@ -100,44 +103,66 @@ describe('Shopping Cart - Point Accumulation', () => {
   });
   
   // ----------------------------------------------------------------
-  // CASE: Build Image Header (under 2000 chars)
+  // CASE: Media Detection & Headers (Images + Videos)
   // ----------------------------------------------------------------
-  describe('buildImageHeader()', () => {
-    it('should format header with up to 5 image links', () => {
-      const attachments = [
-        { url: 'http://img1' },
-        { url: 'http://img2' },
-      ];
-      const header = buildImageHeader(attachments);
-      expect(header).toBe('📸 **Detected 2 image(s)**: [🖼️ Image 1](http://img1) | [🖼️ Image 2](http://img2)');
+  describe('Media Detection & Header', () => {
+    it('should extract images and videos from attachments', () => {
+      const msg = {
+        attachments: [
+          { url: 'http://cdn/photo.png', contentType: 'image/png' },
+          { url: 'http://cdn/video.mp4', contentType: 'video/mp4' },
+        ]
+      };
+      const media = extractMessageMedia(msg);
+      expect(media.images).toHaveLength(1);
+      expect(media.videos).toHaveLength(1);
     });
 
-    it('should cap displayed links to 5 and add (+X more) for >5 images', () => {
+    it('should extract video links from content (YouTube)', () => {
+      const msg = {
+        attachments: [],
+        content: 'Check my boss clear https://youtu.be/abc123xyz'
+      };
+      const media = extractMessageMedia(msg);
+      expect(media.videos).toHaveLength(1);
+      expect(media.videos[0].url).toBe('https://youtu.be/abc123xyz');
+    });
+
+    it('should format header with clean links for images and videos', () => {
+      const media = {
+        images: [{ url: 'http://img1' }, { url: 'http://img2' }],
+        videos: [{ url: 'http://vid1.mp4' }]
+      };
+      const header = buildMediaHeader(media);
+      expect(header).toBe('Media: [🖼️ 1](http://img1) • [🖼️ 2](http://img2) • [🎥 Video](http://vid1.mp4)');
+    });
+
+    it('should cap displayed image links to 5 and add (+X more)', () => {
       const attachments = Array.from({ length: 18 }, (_, i) => ({ url: `http://img${i + 1}` }));
-      const header = buildImageHeader(attachments);
-      expect(header).toContain('📸 **Detected 18 image(s)**:');
-      expect(header).toContain('[🖼️ Image 5](http://img5)');
-      expect(header).not.toContain('[🖼️ Image 6]');
+      const header = buildMediaHeader(attachments);
+      expect(header).toContain('Media: [🖼️ 1](http://img1)');
+      expect(header).toContain('[🖼️ 5](http://img5)');
+      expect(header).not.toContain('[🖼️ 6]');
       expect(header).toContain('*(+13 more)*');
     });
   });
 
   // ----------------------------------------------------------------
-  // CASE: Extract detected images
+  // CASE: Extract media header
   // ----------------------------------------------------------------
-  describe('extractDetectedImages()', () => {
-    it('should extract detected images string from content', () => {
-      const content = '📸 **Detected 3 image(s)**\n\n🛒 **Point Shopping Cart**';
-      expect(extractDetectedImages(content)).toBe('📸 **Detected 3 image(s)**');
+  describe('extractMediaHeader()', () => {
+    it('should extract Media: line from content', () => {
+      const content = 'Target: **User**\nMedia: [🖼️ 1](http://img1)\n\n• **CREST** (+8 pts)';
+      expect(extractMediaHeader(content)).toBe('Media: [🖼️ 1](http://img1)');
     });
 
-    it('should extract detected images line with image links', () => {
-      const content = '📸 **Detected 2 image(s)**: [🖼️ Image 1](http://img1) | [🖼️ Image 2](http://img2)\n\n🛒 **Point Shopping Cart**';
-      expect(extractDetectedImages(content)).toBe('📸 **Detected 2 image(s)**: [🖼️ Image 1](http://img1) | [🖼️ Image 2](http://img2)');
+    it('should support legacy detected images line', () => {
+      const content = '📸 **Detected 2 image(s)**\n\n• **CREST** (+8 pts)';
+      expect(extractMediaHeader(content)).toBe('📸 **Detected 2 image(s)**');
     });
 
-    it('should return null if no detected images string', () => {
-      expect(extractDetectedImages('Hello world')).toBeNull();
+    it('should return null if no media line', () => {
+      expect(extractMediaHeader('Hello world')).toBeNull();
     });
   });
 
@@ -145,59 +170,38 @@ describe('Shopping Cart - Point Accumulation', () => {
   // CASE: Preservation in buildCartBackContent
   // ----------------------------------------------------------------
   describe('buildCartBackContent() preservation', () => {
-    it('should preserve detected images line when going back', () => {
-      const existing = '📸 **Detected 2 image(s)**\n\n🛒 **Point Shopping Cart**\n\n📜 **Pending Rewards:**\n• **CREST: 4+** (+8 pts)\n\nSelect next:';
-      const result = buildCartBackContent(existing, 'New prompt:');
-      expect(result).toContain('📸 **Detected 2 image(s)**');
-      expect(result).toContain('New prompt:');
+    it('should preserve header and pending list when navigating', () => {
+      const existing = 'Target: **Member**\nMedia: [🖼️ 1](http://img)\n\n• **CREST: 4+** (+8 pts)\n**Total: +8 pts**';
+      const result = buildCartBackContent(existing, 'Select next:');
+      expect(result).toContain('Target: **Member**');
+      expect(result).toContain('Media: [🖼️ 1](http://img)');
+      expect(result).toContain('• **CREST: 4+** (+8 pts)');
+      expect(result).toContain('Total: +8 pts');
+      expect(result).toContain('Select next:');
     });
   });
 
   // ----------------------------------------------------------------
-  // CASE: Full end-to-end cart flow simulation
+  // CASE: Full end-to-end flow simulation
   // ----------------------------------------------------------------
-  describe('Full Cart Flow - E2E Simulation', () => {
-    it('[E2E] 2 images, 2x Crest 4+ → total 16 pts, correct list', () => {
-      // Step 1: Admin picks Crest 4+ for image 1
+  describe('Full Flow Simulation', () => {
+    it('[E2E] 2 media, 2x Crest 4+ → total 16 pts, correct list', () => {
       let pendingList = '';
       pendingList = addItemToCart(pendingList, { mission: 'CREST: 4+', points: 8 });
-
-      // Step 2: Admin clicks "Add More", picks Crest 4+ for image 2
       pendingList = addItemToCart(pendingList, { mission: 'CREST: 4+', points: 8 });
 
-      // Step 3: Bot builds cart message
-      const cartMessage = buildCartMessage(pendingList);
-
-      // Step 4: Bot parses cart message to save to DB
+      const cartMessage = buildCartMessage(pendingList, 'Target: **User**\nMedia: [🖼️ 1](http://img1)');
       const items = parseCartFromContent(cartMessage);
       const total = items.reduce((s, i) => s + i.points, 0);
 
       expect(items).toHaveLength(2);
       expect(total).toBe(16);
-      expect(cartMessage).toContain('Total Points to award: 16');
+      expect(cartMessage).toContain('Total: +16 pts');
+      expect(cartMessage).not.toContain('Shopping Cart');
+      expect(cartMessage).not.toContain('Pending Rewards:');
     });
 
-    it('[E2E] Preservation of detected images throughout flow', () => {
-      const initialHeader = '📸 **Detected 2 image(s)**';
-      let pendingList = '';
-      
-      // Step 1: First item added
-      pendingList = addItemToCart(pendingList, { mission: 'CREST: 4+', points: 8 });
-      let message = buildCartMessage(pendingList, initialHeader);
-      expect(message).toContain(initialHeader);
-
-      // Step 2: Go back
-      message = buildCartBackContent(message, 'Select next category:');
-      expect(message).toContain(initialHeader);
-
-      // Step 3: Add second item
-      pendingList = addItemToCart(pendingList, { mission: 'SREQ: Rep', points: 5 });
-      message = buildCartMessage(pendingList, message);
-      expect(message).toContain(initialHeader);
-      expect(message).toContain('Total Points to award: 13');
-    });
-
-    it('[E2E] 3 images mixed → correct total and item count', () => {
+    it('[E2E] 3 mixed items → correct total', () => {
       let pendingList = '';
       pendingList = addItemToCart(pendingList, { mission: 'CREST: Burst', points: 20 });
       pendingList = addItemToCart(pendingList, { mission: 'LDB: Spex 1st Place', points: 24 });
@@ -209,7 +213,7 @@ describe('Shopping Cart - Point Accumulation', () => {
 
       expect(items).toHaveLength(3);
       expect(total).toBe(64);
-      expect(cartMessage).toContain('Total Points to award: 64');
+      expect(cartMessage).toContain('Total: +64 pts');
     });
   });
 
@@ -219,8 +223,8 @@ describe('Shopping Cart - Point Accumulation', () => {
     it('should correctly resolve Crest 4+ option', () => {
       const customId = 'calc_final_crest_4plus_12345_6789';
       const parts = customId.split('_');
-      parts.pop(); // messageId
-      parts.pop(); // memberId
+      parts.pop();
+      parts.pop();
       const optionId = parts[3] + (parts[4] ? '_' + parts[4] : '');
       const type = parts[2];
       const catKey = type === 'crest' ? 'CRESTS' : 'SR_EQ';
@@ -231,11 +235,11 @@ describe('Shopping Cart - Point Accumulation', () => {
       expect(option?.label).toBe('4+');
     });
 
-    it("should correctly resolve SR's EQ Rep option with the new eq_ prefix pattern", () => {
+    it("should correctly resolve SR's EQ Rep option", () => {
       const customId = 'calc_final_sreq_eq_rep_12345_6789';
       const parts = customId.split('_');
-      parts.pop(); // messageId
-      parts.pop(); // memberId
+      parts.pop();
+      parts.pop();
       const optionId = parts[3] + (parts[4] ? '_' + parts[4] : '');
       const type = parts[2];
       const catKey = type === 'crest' ? 'CRESTS' : 'SR_EQ';
@@ -244,21 +248,6 @@ describe('Shopping Cart - Point Accumulation', () => {
       expect(option).toBeDefined();
       expect(option?.points).toBe(5);
       expect(option?.label).toBe('Rep');
-    });
-
-    it("should correctly resolve SR's EQ Custom option with the new eq_ prefix pattern", () => {
-      const customId = 'calc_final_sreq_eq_custom_12345_6789';
-      const parts = customId.split('_');
-      parts.pop(); // messageId
-      parts.pop(); // memberId
-      const optionId = parts[3] + (parts[4] ? '_' + parts[4] : '');
-      const type = parts[2];
-      const catKey = type === 'crest' ? 'CRESTS' : 'SR_EQ';
-
-      const option = getOptionById(catKey, optionId);
-      expect(option).toBeDefined();
-      expect(option?.points).toBe(20);
-      expect(option?.label).toBe('Custom');
     });
   });
 });

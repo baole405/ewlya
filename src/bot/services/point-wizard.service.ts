@@ -16,7 +16,7 @@ import {
 import { prisma } from '../../database/prisma';
 import { LoggerService } from './logger.service';
 import { CategoryKey, getOptionById, POINT_CONFIG } from './point-calculator.service';
-import { addItemToCart, buildCartBackContent, buildCartMessage, calcTotalFromList, countProcessedImages, extractDetectedImages, extractTotalImages, parseCartFromContent, removeItemFromCart } from '../utils/cart.utils';
+import { addItemToCart, buildCartBackContent, buildCartMessage, calcTotalFromList, countProcessedImages, extractDetectedImages, extractTotalImages, getPendingListFromContent, parseCartFromContent, removeItemFromCart } from '../utils/cart.utils';
 
 export class PointWizardService {
   /**
@@ -68,11 +68,11 @@ export class PointWizardService {
         new ButtonBuilder().setCustomId(`calc_final_crest_4plus_${targetMemberId}_${messageId}`).setLabel('4+ (8 pts)').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId(`calc_final_crest_burst_${targetMemberId}_${messageId}`).setLabel('Burst (20 pts)').setStyle(ButtonStyle.Danger),
         new ButtonBuilder().setCustomId(`calc_final_crest_zero_${targetMemberId}_${messageId}`).setLabel('0 (0 pts)').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('⬅️ Back').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('Back').setStyle(ButtonStyle.Secondary),
       );
 
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `💎 **Crest Selected.** Choose the tier:${progress}`),
+        content: buildCartBackContent(interaction.message.content, `💎 **Crest:**`),
         components: [row],
       });
     }
@@ -82,11 +82,11 @@ export class PointWizardService {
         new ButtonBuilder().setCustomId(`calc_final_sreq_eq_rep_${targetMemberId}_${messageId}`).setLabel('Rep (5 pts)').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId(`calc_final_sreq_eq_custom_${targetMemberId}_${messageId}`).setLabel('Custom (20 pts)').setStyle(ButtonStyle.Danger),
         new ButtonBuilder().setCustomId(`calc_final_sreq_eq_zero_${targetMemberId}_${messageId}`).setLabel('0 (0 pts)').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('⬅️ Back').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('Back').setStyle(ButtonStyle.Secondary),
       );
 
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `🛠️ **SR's EQ Selected.** Choose the type:${progress}`),
+        content: buildCartBackContent(interaction.message.content, `🛠️ **SR's EQ:**`),
         components: [row],
       });
     }
@@ -94,7 +94,7 @@ export class PointWizardService {
     if (category === 'ldb') {
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`calc_ldb_stage_${targetMemberId}_${messageId}`)
-        .setPlaceholder('Select Leaderboard Stage')
+        .setPlaceholder('Stage')
         .addOptions(
           new StringSelectMenuOptionBuilder().setLabel('Spex or Higher / Ruins 6-16F').setValue('LB_SPEX'),
           new StringSelectMenuOptionBuilder().setLabel('EX2 & Lower').setValue('LB_EX'),
@@ -103,11 +103,11 @@ export class PointWizardService {
         );
       const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
       const backRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('⬅️ Back').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('Back').setStyle(ButtonStyle.Secondary),
       );
 
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `🏆 **Leaderboard Selected.** Choose the stage:${progress}`),
+        content: buildCartBackContent(interaction.message.content, `🏆 **Leaderboard:**`),
         components: [row, backRow],
       });
     }
@@ -115,7 +115,7 @@ export class PointWizardService {
     if (category === 'mines') {
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`calc_final_ldb_MINES_${targetMemberId}_${messageId}`)
-        .setPlaceholder('Select Mines Floor')
+        .setPlaceholder('Floor')
         .addOptions(
           POINT_CONFIG.MINES.options.map(opt =>
             new StringSelectMenuOptionBuilder().setLabel(`${opt.label} (${opt.points} pts)`).setValue(opt.id)
@@ -123,11 +123,11 @@ export class PointWizardService {
         );
       const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
       const backRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('⬅️ Back').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('Back').setStyle(ButtonStyle.Secondary),
       );
 
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `⛏️ **Mines Selected.** Select the floor:${progress}`),
+        content: buildCartBackContent(interaction.message.content, `⛏️ **Mines:**`),
         components: [row, backRow],
       });
     }
@@ -135,7 +135,7 @@ export class PointWizardService {
     if (category === 'raids') {
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`calc_final_ldb_RAIDS_${targetMemberId}_${messageId}`)
-        .setPlaceholder('Select Raid Rank')
+        .setPlaceholder('Rank')
         .addOptions(
           POINT_CONFIG.RAIDS.options.map(opt =>
             new StringSelectMenuOptionBuilder().setLabel(`${opt.label} (${opt.points} pts)`).setValue(opt.id)
@@ -143,24 +143,24 @@ export class PointWizardService {
         );
       const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
       const backRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('⬅️ Back').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('Back').setStyle(ButtonStyle.Secondary),
       );
 
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `⚔️ **Raids Selected.** Select rank standing:${progress}`),
+        content: buildCartBackContent(interaction.message.content, `⚔️ **Raids:**`),
         components: [row, backRow],
       });
     }
 
     if (category === 'chal') {
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId(`calc_final_chal_chal_max_${targetMemberId}_${messageId}`).setLabel('Maximum (20 pts)').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`calc_final_chal_chal_min_${targetMemberId}_${messageId}`).setLabel('Minimum (5 pts)').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('⬅️ Back').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_final_chal_chal_max_${targetMemberId}_${messageId}`).setLabel('Max (20 pts)').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId(`calc_final_chal_chal_min_${targetMemberId}_${messageId}`).setLabel('Min (5 pts)').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('Back').setStyle(ButtonStyle.Secondary),
       );
 
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `🎯 **Challenges Selected.** Choose the difficulty:${progress}`),
+        content: buildCartBackContent(interaction.message.content, `🎯 **Challenges:**`),
         components: [row],
       });
     }
@@ -308,18 +308,12 @@ export class PointWizardService {
     const backRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`calc_back_ldb_${targetMemberId}_${messageId}`)
-        .setLabel('⬅️ Back to Stages')
+        .setLabel('Back')
         .setStyle(ButtonStyle.Secondary),
     );
 
-    const rawTotalImg = extractTotalImages(interaction.message.content);
-    const processedImg = countProcessedImages(interaction.message.content);
-    const remainingImg = Math.max(0, rawTotalImg - processedImg);
-    const imgIdx = processedImg + 1;
-    const progress = rawTotalImg > 0 ? ` (Image ${imgIdx}/${rawTotalImg})` : '';
-
     return interaction.update({
-      content: buildCartBackContent(interaction.message.content, `🏆 Stage: **${stageConfig.label}**. Now select the rank:${progress}`),
+      content: buildCartBackContent(interaction.message.content, `🏆 **${stageConfig.label}:**`),
       components: [row, backRow],
     });
   }
@@ -408,38 +402,34 @@ export class PointWizardService {
     const processedImages = countProcessedImages(interaction.message.content);
     const remainingImages = Math.max(0, rawTotalImages - processedImages);
 
-    // HYBRID SMART WIZARD: If multiple remaining images (>1), offer Quantity Choice prompt!
+    // If multiple remaining media (>1), offer Quantity Choice prompt
     if (remainingImages > 1) {
       const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`calc_qtyapply_all_${catKey}_${optionId}_${targetMemberId}_${originalMessageId}`)
-          .setLabel(`⚡ All ${remainingImages} Remaining Images (+${pointsToAdd * remainingImages} pts)`)
+          .setLabel(`All (${remainingImages}x) (+${pointsToAdd * remainingImages} pts)`)
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
           .setCustomId(`calc_qtyapply_custom_${catKey}_${optionId}_${targetMemberId}_${originalMessageId}`)
-          .setLabel('🔢 Custom Quantity')
+          .setLabel('Custom Qty')
           .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
           .setCustomId(`calc_qtyapply_1_${catKey}_${optionId}_${targetMemberId}_${originalMessageId}`)
-          .setLabel(`🎯 Single Image (+${pointsToAdd} pts)`)
+          .setLabel(`Single (1x) (+${pointsToAdd} pts)`)
           .setStyle(ButtonStyle.Secondary),
       );
 
       const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`calc_back_main_${targetMemberId}_${originalMessageId}`)
-          .setLabel('⬅️ Back to Categories')
+          .setLabel('Back')
           .setStyle(ButtonStyle.Secondary),
       );
-
-      const statusText = processedImages > 0 
-        ? `Processed **${processedImages}/${rawTotalImages} images** (${remainingImages} images remaining).` 
-        : `Detected **${rawTotalImages} images** in this post.`;
 
       return interaction.update({
         content: buildCartBackContent(
           interaction.message.content,
-          `⚡ **${missionText} Selected!** (${pointsToAdd} pts/image)\n${statusText} How many images for this reward?`
+          `**${missionText}** (+${pointsToAdd} pts each) — Quantity:`
         ),
         components: [row1, row2],
       });
@@ -462,8 +452,7 @@ export class PointWizardService {
     count: number = 1
   ) {
     const existingContent = interaction.message?.content || '';
-    const pendingMatch = existingContent.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
-    let pendingList = pendingMatch ? pendingMatch[1].trim() : '';
+    let pendingList = getPendingListFromContent(existingContent);
 
     pendingList = addItemToCart(pendingList, { mission: missionText, points: pointsToAdd }, count);
     const totalPoints = calcTotalFromList(pendingList);
@@ -473,33 +462,33 @@ export class PointWizardService {
     const processedImages = countProcessedImages(updatedCartMessage);
     const remainingImages = Math.max(0, rawTotalImages - processedImages);
 
-    // Auto-advance logic: If there are still remaining un-scored images, prompt for next category!
+    // Auto-advance logic: If there are still remaining un-scored media, prompt for next category!
     if (rawTotalImages > 0 && remainingImages > 0) {
       const categoryRows = this.buildCategoryRows(targetMemberId, originalMessageId);
-      const nextIdx = processedImages + 1;
-      const progress = `📌 **${processedImages}/${rawTotalImages} images processed** (${remainingImages} images remaining).\nSelect the next reward category for **Image ${nextIdx}/${rawTotalImages}**:`;
-
       return interaction.editReply({
-        content: buildCartBackContent(updatedCartMessage, progress),
+        content: buildCartBackContent(updatedCartMessage, `Select category:`),
         components: categoryRows,
       });
     }
 
-    // Final Review & Save screen when all images are accounted for or single-image post
+    // Final Review & Save screen
     const reviewRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setCustomId(`calc_back_main_${targetMemberId}_${originalMessageId}`)
-        .setLabel('➕ Add More Items')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
         .setCustomId(`calc_confirm_save_${targetMemberId}_${originalMessageId}`)
-        .setLabel(`✅ Confirm & Save (${totalPoints} pts)`)
+        .setLabel(`Confirm (+${totalPoints} pts)`)
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
+        .setCustomId(`calc_back_main_${targetMemberId}_${originalMessageId}`)
+        .setLabel('Add More')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
         .setCustomId(`calc_edit_list_${targetMemberId}_${originalMessageId}`)
-        .setLabel('✏️ Edit Items')
+        .setLabel('Edit')
         .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId(`calc_cancel_${originalMessageId}`).setLabel('❌ Cancel').setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`calc_cancel_${originalMessageId}`)
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Danger),
     );
 
     return interaction.editReply({
@@ -573,7 +562,7 @@ export class PointWizardService {
         }).catch((err) => console.error('Failed to log point wizard item:', err));
       }
 
-      await interaction.editReply({ content: `✅ Awarded **${total} points** to **${member.nickname}**.\n*(Auto-delete in 1 min)*`, components: [] });
+      await interaction.editReply({ content: `✅ Awarded **+${total} pts** to **${member.nickname}**.`, components: [] });
       setTimeout(() => interaction.deleteReply().catch(() => null), 60000);
 
       if (originalMessageId && interaction.channel) {
@@ -601,14 +590,8 @@ export class PointWizardService {
 
     if (backTarget === 'main') {
       const categoryRows = this.buildCategoryRows(targetMemberId, messageId);
-      const cart = parseCartFromContent(interaction.message.content);
-      const rawTotalImg = extractTotalImages(interaction.message.content);
-      const effectiveTotalImg = Math.min(rawTotalImg, 5);
-      const imgIdx = cart.length + 1;
-      const progress = effectiveTotalImg > 0 ? ` for **Image ${imgIdx}/${effectiveTotalImg}**` : '';
-
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `📌 Select the next reward category${progress}:`),
+        content: buildCartBackContent(interaction.message.content, `Select category:`),
         components: categoryRows,
       });
     }
@@ -616,7 +599,7 @@ export class PointWizardService {
     if (backTarget === 'ldb') {
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`calc_ldb_stage_${targetMemberId}_${messageId}`)
-        .setPlaceholder('Select Leaderboard Stage')
+        .setPlaceholder('Stage')
         .addOptions(
           new StringSelectMenuOptionBuilder().setLabel('Spex or Higher / Ruins 6-16F').setValue('LB_SPEX'),
           new StringSelectMenuOptionBuilder().setLabel('EX2 & Lower').setValue('LB_EX'),
@@ -625,17 +608,11 @@ export class PointWizardService {
         );
       const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
       const backRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('⬅️ Back').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId(`calc_back_main_${targetMemberId}_${messageId}`).setLabel('Back').setStyle(ButtonStyle.Secondary),
       );
 
-      const cart = parseCartFromContent(interaction.message.content);
-      const rawTotalImg = extractTotalImages(interaction.message.content);
-      const effectiveTotalImg = Math.min(rawTotalImg, 5);
-      const imgIdx = cart.length + 1;
-      const progress = effectiveTotalImg > 0 ? ` (Image ${imgIdx}/${effectiveTotalImg})` : '';
-
       return interaction.update({
-        content: buildCartBackContent(interaction.message.content, `🏆 **Leaderboard Selected.** Choose the stage:${progress}`),
+        content: buildCartBackContent(interaction.message.content, `🏆 **Leaderboard:**`),
         components: [row, backRow],
       });
     }
@@ -664,11 +641,11 @@ export class PointWizardService {
     const originalMessageId = parts[4];
 
     const cart = parseCartFromContent(interaction.message.content);
-    if (cart.length === 0) return interaction.reply({ content: 'Cart is empty.', flags: [MessageFlags.Ephemeral] });
+    if (cart.length === 0) return interaction.reply({ content: 'No items.', flags: [MessageFlags.Ephemeral] });
 
     const menu = new StringSelectMenuBuilder()
       .setCustomId(`calc_item_edit_menu_${targetMemberId}_${originalMessageId}`)
-      .setPlaceholder('Select an item to edit (it will be removed)')
+      .setPlaceholder('Select item to remove')
       .addOptions(
         cart.map((item, idx) =>
           new StringSelectMenuOptionBuilder()
@@ -682,12 +659,12 @@ export class PointWizardService {
     const backRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`calc_back_to_cart_${targetMemberId}_${originalMessageId}`)
-        .setLabel('⬅️ Back to Cart')
+        .setLabel('Back')
         .setStyle(ButtonStyle.Secondary)
     );
 
     return interaction.update({
-      content: buildCartBackContent(interaction.message.content, '✏️ **Select an item to edit.**\n*Note: The item will be removed and you will re-select points for it.*'),
+      content: buildCartBackContent(interaction.message.content, 'Select item to remove:'),
       components: [row, backRow],
     });
   }
@@ -696,60 +673,42 @@ export class PointWizardService {
     const parts = interaction.customId.split('_');
     const targetMemberId = parts[4];
     const originalMessageId = parts[5];
-    const indexToEdit = parseInt(interaction.values[0]);
+    const indexToEdit = parseInt(interaction.values[0], 10);
 
-    const pendingMatch = interaction.message.content.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
-    let pendingList = pendingMatch ? pendingMatch[1].trim() : '';
-
+    let pendingList = getPendingListFromContent(interaction.message.content);
     pendingList = removeItemFromCart(pendingList, indexToEdit);
     const categoryRows = this.buildCategoryRows(targetMemberId, originalMessageId);
 
-    const rawTotalImg = extractTotalImages(interaction.message.content);
-    const effectiveTotalImg = Math.min(rawTotalImg, 5);
-    const cart = parseCartFromContent(buildCartMessage(pendingList));
-    const nextIdx = cart.length + 1;
-    const progress = effectiveTotalImg > 0 ? ` for **Image ${nextIdx}/${effectiveTotalImg}**` : '';
-
     return interaction.update({
-      content: buildCartBackContent(buildCartMessage(pendingList, interaction.message.content), `📌 Re-selecting points${progress}:`),
+      content: buildCartBackContent(buildCartMessage(pendingList, interaction.message.content), `Select category:`),
       components: categoryRows,
     });
   }
 
   static async handleBackToCart(interaction: ButtonInteraction) {
-    const pendingMatch = interaction.message.content.match(/📜\s*(?:\*\*)?Pending Rewards:(?:\*\*)?\s*\n([\s\S]*?)(\n\n|$)/i);
-    const pendingList = pendingMatch ? pendingMatch[1].trim() : '';
+    const pendingList = getPendingListFromContent(interaction.message.content);
 
     const parts = interaction.customId.split('_');
     const targetMemberId = parts[4];
     const originalMessageId = parts[5];
     const totalPoints = calcTotalFromList(pendingList);
 
-    const rawTotalImages = extractTotalImages(interaction.message.content);
-    const totalImages = Math.min(rawTotalImages, 5);
-    const currentCount = parseCartFromContent(interaction.message.content).length;
-
-    const isAddMoreDisabled = totalImages > 0 && currentCount >= totalImages;
-    const isConfirmDisabled = totalImages > 0 && currentCount < totalImages;
-
     const reviewRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setCustomId(`calc_back_main_${targetMemberId}_${originalMessageId}`)
-        .setLabel('➕ Add More')
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(isAddMoreDisabled),
-      new ButtonBuilder()
         .setCustomId(`calc_confirm_save_${targetMemberId}_${originalMessageId}`)
-        .setLabel(`✅ Confirm & Save (${totalPoints} pts)`)
-        .setStyle(ButtonStyle.Success)
-        .setDisabled(isConfirmDisabled),
+        .setLabel(`Confirm (+${totalPoints} pts)`)
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`calc_back_main_${targetMemberId}_${originalMessageId}`)
+        .setLabel('Add More')
+        .setStyle(ButtonStyle.Primary),
       new ButtonBuilder()
         .setCustomId(`calc_edit_list_${targetMemberId}_${originalMessageId}`)
-        .setLabel('✏️ Edit Items')
+        .setLabel('Edit')
         .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`calc_cancel_${originalMessageId}`)
-        .setLabel('❌ Cancel')
+        .setLabel('Cancel')
         .setStyle(ButtonStyle.Danger)
     );
 
