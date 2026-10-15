@@ -1,4 +1,5 @@
 import { Client, Events } from 'discord.js';
+import { BirthdayService } from '../services/birthday.service';
 
 /**
  * Handle Client Ready Event
@@ -22,23 +23,23 @@ export async function execute(client: Client) {
   if (testChannelId) console.log(`📡 Test Channel: ${testChannelId}`);
 
   // --------------------------------------------------
-  // AUTOMATED END-OF-MONTH REMINDER
+  // 1. AUTOMATED END-OF-MONTH REMINDER
   // --------------------------------------------------
   let lastNotifiedMonth = -1;
 
   const checkEndOfMonth = async () => {
+    if (process.env['IS_LOCAL_BOT'] === 'true') return;
     const now = new Date();
     // Check if it's the 28th of the month and we haven't notified yet this month
     if (now.getDate() === 28 && lastNotifiedMonth !== now.getMonth()) {
       lastNotifiedMonth = now.getMonth();
-      
+
       const adminAnnounceId = process.env['ANNOUCEMENTS_ADMIN_CHANNELS_ID'];
       if (!adminAnnounceId) return;
 
       try {
         const channel = await client.channels.fetch(adminAnnounceId);
         if (channel && channel.isTextBased()) {
-          // Send the reminder
           await (channel as any).send(
             `⚠️ **Attention Admins!**\nThe month is ending soon! Please remember to run \`/season close\` in the next few days to tally all points, post the final leaderboard to the Hall of Fame, and close out the month.`
           );
@@ -50,7 +51,35 @@ export async function execute(client: Client) {
     }
   };
 
-  // Run once on startup, then every hour
   checkEndOfMonth();
   setInterval(checkEndOfMonth, 1000 * 60 * 60);
+
+  // --------------------------------------------------
+  // 2. AUTOMATED DAILY BIRTHDAY CELEBRATION
+  // --------------------------------------------------
+  const checkBirthdays = async () => {
+    try {
+      const isLocalBot = process.env['IS_LOCAL_BOT'] === 'true';
+      const { hour, dateKey } = BirthdayService.getNowUTC7();
+
+      // Run daily at or after 9:00 AM UTC+7
+      if (hour >= 9) {
+        if (isLocalBot) {
+          // Dev bot: log check to console without posting to official clan channels
+          console.log(`[CRON] Dev mode birthday check passed for ${dateKey}.`);
+        } else {
+          const count = await BirthdayService.announceTodaysBirthdays(client);
+          if (count > 0) {
+            console.log(`[CRON] Announced ${count} birthday(s) for ${dateKey}.`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[CRON] Failed to check birthdays:', err);
+    }
+  };
+
+  // Run on startup after 5 seconds, then check every 30 minutes
+  setTimeout(checkBirthdays, 5000);
+  setInterval(checkBirthdays, 1000 * 60 * 30);
 }

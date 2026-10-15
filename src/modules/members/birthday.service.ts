@@ -72,16 +72,13 @@ export class BirthdayService {
     const stickerId = process.env['BIRTHDAY_STICKER_ID']?.trim();
     
     const embed = new EmbedBuilder()
-      .setTitle('🎂 Happy Birthday from Liza & DarkStar! 🎉')
+      .setTitle('🎂 Happy Birthday!')
       .setDescription(
-        `✨ Everyone wish a fantastic happy birthday to ${mention}! 🎁🥳\n\n` +
-        `May your special day be packed with endless joy, epic loot, rare drops, and legendary victories! 🌟💖\n\n` +
-        `*Don't forget to claim your birthday luck in-game today!* 🍰`
+        `Wishing a fantastic Happy Birthday to ${mention}!\nMay your year ahead be filled with great health, joy, and success.`
       )
-      .setColor(0xff69b4) // Hot pink / Birthday color
-      .setThumbnail('https://cdn.discordapp.com/attachments/1370483716362731630/1370483716362731630/birthday_cake.png')
+      .setColor(0xf472b6) // Rose pink
       .setImage(bannerUrl)
-      .setFooter({ text: 'Liza & The DarkStar Guild Team ❤️' })
+      .setFooter({ text: 'DarkStar Clan' })
       .setTimestamp();
 
     const messageOptions: any = {

@@ -122,9 +122,10 @@ class DarkStarBot {
     console.log('🤖 DarkStar Bot is initializing...');
 
     const isLocalBot = process.env['IS_LOCAL_BOT'] === 'true';
+    const isSameBotAsProd = process.env['PROD_DISCORD_CLIENT_ID'] && process.env['DISCORD_CLIENT_ID'] === process.env['PROD_DISCORD_CLIENT_ID'];
     const productionUrl = process.env['PRODUCTION_URL'];
 
-    if (isLocalBot && productionUrl) {
+    if (isLocalBot && isSameBotAsProd && productionUrl) {
       console.log(`📡 Local bot mode active. Requesting lease from production bot at ${productionUrl}...`);
       await this.sendLeasePing();
       

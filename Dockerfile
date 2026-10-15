@@ -37,5 +37,5 @@ COPY --from=builder /app/src ./src
 EXPOSE 3000
 ENV NODE_ENV=production
 
-# The actual command is defined in docker-compose.yml
-CMD ["npm", "run", "start:prod:api"]
+# Run migrations then start API + Bot in one process
+CMD npx prisma migrate deploy && node dist/combined/main

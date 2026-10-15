@@ -21,6 +21,26 @@ export async function execute(interaction: Interaction) {
 
     if (!command) return;
 
+    // Dev Bot Channel Guard: When running as local dev bot (IS_LOCAL_BOT === 'true'), restrict commands to dev channels
+    const isLocalBot = process.env['IS_LOCAL_BOT'] === 'true';
+    if (isLocalBot) {
+      const allowedDevChannels = [
+        process.env['TEST_CHANNEL_ID'],
+        process.env['ANNOUCEMENTS_DEVELOPER_ID'],
+        process.env['PROGRESSION_CHECK_ID_DEVELOPER'],
+        process.env['EWLYA_EDIT_LOGS_ID'],
+      ].filter(Boolean) as string[];
+
+      const currentChannelId = interaction.channelId;
+      if (currentChannelId && !allowedDevChannels.includes(currentChannelId)) {
+        const primaryTestChannel = process.env['TEST_CHANNEL_ID'] || '1424269975698407454';
+        return interaction.reply({
+          content: `⚠️ **[Liza da Chicken - Dev Bot]** Testing is restricted to <#${primaryTestChannel}>.`,
+          ephemeral: true,
+        });
+      }
+    }
+
     // Access Controls for Commands
     const adminIds = (process.env['ADMIN_IDS'] || '').split(',').map(id => id.trim());
     const isAdmin = adminIds.includes(interaction.user.id);
@@ -28,7 +48,7 @@ export async function execute(interaction: Interaction) {
     const member = await prisma.member.findUnique({ where: { discordId: interaction.user.id } });
     const isOfficial = member && member.status === 'OFFICIAL';
 
-    const isPublicMemberCommand = ['profile'].includes(interaction.commandName);
+    const isPublicMemberCommand = ['profile', 'birthday'].includes(interaction.commandName);
     const isMemberCommand = ['progression', 'list-members', 'check-profile', 'mines-drop', 'leaderboard', 'summarize'].includes(interaction.commandName);
     const isAdminCommand = !isMemberCommand && !isPublicMemberCommand;
 
