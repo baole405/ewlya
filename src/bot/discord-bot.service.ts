@@ -24,6 +24,7 @@ import * as interactionCreate from './events/interaction-create';
 import * as messageReactionAdd from './events/message-reaction-add';
 import * as messageReactionRemove from './events/message-reaction-remove';
 import * as messageCreate from './events/message-create';
+import * as ready from './events/ready';
 
 @Injectable()
 export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
@@ -172,6 +173,12 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`📡 HOF Channel: ${process.env['HOF_CHANNEL_ID']}`);
       this.logger.log(`📡 Test Channel: ${process.env['TEST_CHANNEL_ID']}`);
       this.logger.log('🚀 Bot is fully operational and ready for use.');
+
+      try {
+        await (ready as any).execute(readyClient);
+      } catch (err) {
+        this.logger.error('❌ Error executing ready event handler:', err);
+      }
 
       // Auto-deploy help guide in liza-guide channel if empty
       const guideChannelId = '1505244602318454904';
