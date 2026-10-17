@@ -9,3 +9,4 @@ start-bot-supabase.ps1
 scratch/
 test-birthday.ts
 *.docx
+*.tsbuildinfo

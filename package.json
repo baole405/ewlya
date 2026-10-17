@@ -4,7 +4,7 @@
   "description": "Ewlya Backend Hub - API & Discord Bot",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "nest build && tsc -p tsconfig.json",
     "start": "node dist/main",
     "start:api": "nest start",
     "start:bot": "tsx src/bot/main.ts",
