@@ -346,6 +346,19 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
     return this.client;
   }
 
+  public getStatus() {
+    const isReady = this.client && !!this.client.readyAt;
+    return {
+      connected: isReady,
+      tag: this.client?.user?.tag || null,
+      id: this.client?.user?.id || null,
+      pingMs: isReady ? this.client.ws.ping : null,
+      readyAt: this.client?.readyAt ? this.client.readyAt.toISOString() : null,
+      guilds: isReady ? this.client.guilds.cache.map(g => ({ id: g.id, name: g.name, memberCount: g.memberCount })) : [],
+      commandsLoaded: this.commands.size,
+    };
+  }
+
   async sendMessage(channelId: string, content: string | any) {
     if (!this.client.isReady()) {
       this.logger.warn('⚠️ Client not ready, skipping message send.');
