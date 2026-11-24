@@ -112,12 +112,24 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
 
   private async initializeCommands() {
     const commandsPath = path.join(__dirname, 'commands');
+    // Log via console so it appears in the /logs HTTP endpoint buffer
+    console.log(`📂 Looking for commands at: ${commandsPath}`);
+    console.log(`📂 __dirname = ${__dirname}`);
+
     if (!fs.existsSync(commandsPath)) {
+      console.log(`⚠️ Commands directory NOT FOUND at: ${commandsPath}`);
       this.logger.warn(`⚠️ Commands directory not found at: ${commandsPath}`);
+      // List parent dir for debugging
+      try {
+        const parentDir = path.join(__dirname);
+        const parentContents = fs.readdirSync(parentDir);
+        console.log(`📁 Contents of ${parentDir}:`, parentContents.join(', '));
+      } catch (e) { /* ignore */ }
       return;
     }
 
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts') || file.endsWith('.js'));
+    console.log(`📂 Found ${commandFiles.length} command files: ${commandFiles.join(', ')}`);
     this.logger.log(`📂 Found ${commandFiles.length} command files.`);
 
     for (const file of commandFiles) {
@@ -131,9 +143,11 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
           this.logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
       } catch (err) {
+        console.log(`❌ Failed to load command from ${file}: ${err}`);
         this.logger.error(`❌ Failed to load command from ${file}:`, err);
       }
     }
+    console.log(`✅ Total commands loaded: ${this.commands.size}`);
     (this.client as any).commands = this.commands;
   }
 
@@ -149,6 +163,13 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
     const rest = new REST({ version: '10' }).setToken(token);
     const body = Array.from(this.commands.values()).map((c) => c.data.toJSON());
 
+    // Safety guard: never wipe commands if nothing was loaded (build issue)
+    if (body.length === 0) {
+      this.logger.warn('⚠️ 0 commands loaded — skipping slash command registration to avoid wiping guild commands.');
+      console.log('⚠️ registerSlashCommands aborted: no commands loaded. Check dist/bot/commands/ directory on the server.');
+      return;
+    }
+
     try {
       // Clear global commands to avoid double-registration bugs
       await rest.put(Routes.applicationCommands(clientId), { body: [] });
@@ -156,6 +177,7 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
 
       const guilds = await this.client.guilds.fetch();
       this.logger.log(`🚀 Registering ${body.length} Slash Commands for ${guilds.size} guilds...`);
+      console.log(`🚀 Registering ${body.length} commands to ${guilds.size} guilds...`);
       for (const [guildId] of guilds) {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body });
         this.logger.log(`✅ Registered for Guild: ${guildId}`);

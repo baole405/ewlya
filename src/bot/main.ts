@@ -41,11 +41,7 @@ class DarkStarBot {
 
     console.log(`📂 Found ${commandFiles.length} command files.`);
 
-    const isLocalBot = process.env['IS_LOCAL_BOT'] === 'true';
     for (const file of commandFiles) {
-      if (isLocalBot && (file.startsWith('award-points') || file.startsWith('record-mines-drop'))) {
-        continue;
-      }
       const filePath = path.join(commandsPath, file);
       // Use dynamic import with pathToFileURL to support Windows absolute paths
       const command = await import(pathToFileURL(filePath).href);

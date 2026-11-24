@@ -12,10 +12,10 @@ export class BirthdayService {
 
   constructor(private readonly discordBotService: DiscordBotService) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  // Legacy cron disabled to prevent duplicates — daily birthday announcements are handled by src/bot/services/birthday.service.ts
+  // @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async checkBirthdaysCron() {
-    this.logger.log('🎂 Running daily birthday check...');
-    await this.checkBirthdays(true);
+    this.logger.log('🎂 [Legacy BirthdayService] Cron disabled (handled by bot/services/birthday.service.ts).');
   }
 
   async checkBirthdays(sendMessages: boolean = true) {

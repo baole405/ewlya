@@ -7,6 +7,7 @@ import { AnnouncementService } from '../services/announcement.service';
 import { LoggerService } from '../services/logger.service';
 import { CommandTrackerService } from '../services/command-tracker.service';
 import { MinesDropService } from '../services/mines-drop.service';
+import { BirthdayService } from '../services/birthday.service';
 
 export const name = Events.InteractionCreate;
 
@@ -26,6 +27,8 @@ export async function execute(interaction: Interaction) {
     if (isLocalBot) {
       const allowedDevChannels = [
         process.env['TEST_CHANNEL_ID'],
+        process.env['HOF_CHANNEL_ID'],
+        process.env['MINES_DROPS_CHANNEL_ID'] || '1265850153517060096',
         process.env['ANNOUCEMENTS_DEVELOPER_ID'],
         process.env['PROGRESSION_CHECK_ID_DEVELOPER'],
         process.env['EWLYA_EDIT_LOGS_ID'],
@@ -148,6 +151,41 @@ export async function execute(interaction: Interaction) {
       }
       if (customId.startsWith('calc_cancel')) {
         return await PointWizardService.handleCancel(interaction);
+      }
+
+      if (customId === 'bday_modal_btn') {
+        const modal = new ModalBuilder()
+          .setCustomId('bday_set_modal')
+          .setTitle('Set / Update Your Birthday');
+
+        const dateInput = new TextInputBuilder()
+          .setCustomId('bday_input_date')
+          .setLabel('Birth Date (DD/MM, e.g. 15/08 or 5/7)')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('DD/MM (e.g. 15/08)')
+          .setRequired(true);
+
+        const yearInput = new TextInputBuilder()
+          .setCustomId('bday_input_year')
+          .setLabel('Birth Year (Optional, e.g. 2002)')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('YYYY (e.g. 2002)')
+          .setRequired(false);
+
+        modal.addComponents(
+          new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
+          new ActionRowBuilder<TextInputBuilder>().addComponents(yearInput),
+        );
+
+        await interaction.showModal(modal);
+        return;
+      }
+
+      if (customId === 'bday_refresh_btn') {
+        await interaction.deferUpdate();
+        const { embed, row } = await BirthdayService.buildUpcomingBoard();
+        await interaction.editReply({ embeds: [embed], components: [row] });
+        return;
       }
 
       if (customId.startsWith('announce_send_') || customId === 'sync_view_official') {
@@ -981,6 +1019,41 @@ export async function execute(interaction: Interaction) {
     }
     if (customId.startsWith('calc_qty_modal_')) {
       return await PointWizardService.handleQuantityModalSubmit(interaction);
+    }
+
+    if (customId === 'bday_set_modal') {
+      const rawDate = interaction.fields.getTextInputValue('bday_input_date');
+      const rawYearStr = interaction.fields.getTextInputValue('bday_input_year')?.trim();
+      const rawYear = rawYearStr ? parseInt(rawYearStr, 10) : undefined;
+
+      const parsed = BirthdayService.parseBirthdate(rawDate, rawYear);
+      if (!parsed) {
+        return interaction.reply({
+          content: '❌ Invalid date format. Please use **DD/MM** (e.g., 15/08, 5/7) and an optional 4-digit year.',
+          ephemeral: true,
+        });
+      }
+
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        await MemberService.ensureMemberExists(interaction.user, interaction.guild);
+        await BirthdayService.setBirthday(interaction.user.id, parsed.day, parsed.month, parsed.year);
+
+        await interaction.editReply({
+          content: `🎉 Your birthday has been successfully updated to **${parsed.displayDate}**! Liza will announce and celebrate with the clan on your special day. 🎈`,
+        });
+
+        // Auto-refresh the board message if possible
+        if (interaction.message) {
+          const { embed, row } = await BirthdayService.buildUpcomingBoard();
+          await interaction.message.edit({ embeds: [embed], components: [row] }).catch(() => {});
+        }
+      } catch (err) {
+        console.error('Error saving birthday via modal:', err);
+        await interaction.editReply({ content: '❌ Failed to save birthday. Please try again.' });
+      }
+      return;
     }
 
     // ---------------------------------------------------------

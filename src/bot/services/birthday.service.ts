@@ -1,4 +1,4 @@
-import { Client, EmbedBuilder, TextChannel } from 'discord.js';
+import { Client, EmbedBuilder, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { prisma } from '../../database/prisma';
 
 export interface ParsedBirthday {
@@ -184,6 +184,88 @@ export class BirthdayService {
   }
 
   /**
+   * Build the Official Birthdays Board (Embed + Action Row with Modal Button & Refresh Button)
+   * Sorted chronologically from Jan to Dec (DD/MM), without year or upcoming countdown.
+   */
+  public static async buildUpcomingBoard(): Promise<{ embed: EmbedBuilder; row: ActionRowBuilder<ButtonBuilder> }> {
+    const members = await prisma.member.findMany({
+      where: {
+        status: 'OFFICIAL',
+        birthdate: { not: null },
+      },
+    });
+
+    const totalOfficial = await prisma.member.count({
+      where: { status: 'OFFICIAL' },
+    });
+
+    const list: Array<{
+      member: typeof members[0];
+      day: number;
+      month: number;
+      displayDate: string;
+    }> = [];
+
+    for (const m of members) {
+      const parsed = this.parseBirthdate(m.birthdate || '');
+      if (!parsed) continue;
+      const dd = String(parsed.day).padStart(2, '0');
+      const mm = String(parsed.month).padStart(2, '0');
+      list.push({
+        member: m,
+        day: parsed.day,
+        month: parsed.month,
+        displayDate: `${dd}/${mm}`,
+      });
+    }
+
+    // Sort alphabetically by member nickname / ign (A -> Z, case-insensitive)
+    list.sort((a, b) => {
+      const nameA = (a.member.nickname || a.member.ign || '').toLowerCase();
+      const nameB = (b.member.nickname || b.member.ign || '').toLowerCase();
+      return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+    });
+
+    let description = '';
+    if (list.length === 0) {
+      description = 'ℹ️ No birthdays registered in the clan yet.\nClick the button below to register yours!';
+    } else {
+      description = list
+        .map((item) => {
+          const name = item.member.nickname || item.member.ign;
+          return `🎂 **${name}** — \`${item.displayDate}\``;
+        })
+        .join('\n');
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle('🎂 DarkStar Clan — Official Birthdays')
+      .setDescription(description)
+      .setColor(0xf472b6)
+      .addFields({
+        name: '📊 Clan Status',
+        value: `👥 **${list.length} / ${totalOfficial}** Official Members registered.`,
+        inline: false,
+      })
+      .setFooter({ text: 'DarkStar Clan • Click below to register or update your birthday' })
+      .setTimestamp();
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId('bday_modal_btn')
+        .setLabel('✏️ Set / Update My Birthday')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🎂'),
+      new ButtonBuilder()
+        .setCustomId('bday_refresh_btn')
+        .setLabel('🔄 Refresh')
+        .setStyle(ButtonStyle.Secondary)
+    );
+
+    return { embed, row };
+  }
+
+  /**
    * Announce today's birthdays to designated channel
    */
   public static async announceTodaysBirthdays(client: Client, targetChannelId?: string): Promise<number> {
@@ -204,13 +286,43 @@ export class BirthdayService {
       return 0;
     }
 
+    // Pre-fetch recent channel messages (up to 50) to check for existing announcements today (resilient across bot restarts)
+    const recentMessages = await (channel as TextChannel).messages.fetch({ limit: 50 }).catch(() => null);
+
     let announcedCount = 0;
 
     for (const member of birthdays) {
       const key = `${dateKey}:${member.discordId || member.id}`;
-      // Prevent duplicate announcement today
+      // Prevent duplicate announcement today (in-memory cache)
       if (this.announcedDates.has(key)) {
         continue;
+      }
+
+      // Check Discord channel history in case bot restarted today
+      if (recentMessages) {
+        const alreadyAnnouncedToday = recentMessages.some(msg => {
+          if (!msg.author.bot) return false;
+
+          // Message sent timestamp converted to UTC+7 dateKey
+          const msgUtc7 = new Date(msg.createdTimestamp + (7 * 60 + new Date().getTimezoneOffset()) * 60000);
+          const msgDateKey = `${msgUtc7.getFullYear()}-${String(msgUtc7.getMonth() + 1).padStart(2, '0')}-${String(msgUtc7.getDate()).padStart(2, '0')}`;
+          if (msgDateKey !== dateKey) return false;
+
+          const content = msg.content || '';
+          const embedTitle = msg.embeds[0]?.title || '';
+          const embedDesc = msg.embeds[0]?.description || '';
+          const isBirthdayMsg = content.includes('Happy Birthday') || embedTitle.includes('Happy Birthday');
+          const isTargetMember = (member.discordId && (content.includes(member.discordId) || embedDesc.includes(member.discordId))) ||
+            content.includes(member.nickname) || embedDesc.includes(member.nickname);
+
+          return isBirthdayMsg && isTargetMember;
+        });
+
+        if (alreadyAnnouncedToday) {
+          this.announcedDates.add(key);
+          console.log(`🎂 [BirthdayService] Announcement already exists in channel history today for ${member.nickname} (${member.discordId}). Skipping.`);
+          continue;
+        }
       }
 
       // Try fetching Discord avatar if member avatar is null
