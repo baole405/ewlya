@@ -128,17 +128,27 @@ export class DiscordBotService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.ts') || file.endsWith('.js'));
+    const commandFiles = fs.readdirSync(commandsPath)
+      .filter(file => (file.endsWith('.ts') || file.endsWith('.js')) && !file.endsWith('.d.ts'));
     console.log(`📂 Found ${commandFiles.length} command files: ${commandFiles.join(', ')}`);
     this.logger.log(`📂 Found ${commandFiles.length} command files.`);
 
     for (const file of commandFiles) {
       const filePath = path.join(commandsPath, file);
       try {
-        const command = await import(pathToFileURL(filePath).href);
-        if ('data' in command && 'execute' in command) {
-          this.commands.set(command.data.name, command);
-          this.logger.log(`✅ Loaded command: /${command.data.name}`);
+        let command: any;
+        try {
+          command = require(filePath);
+        } catch {
+          command = await import(pathToFileURL(filePath).href);
+        }
+
+        const cmdData = command?.data || command?.default?.data;
+        const cmdExecute = command?.execute || command?.default?.execute;
+
+        if (cmdData && cmdExecute) {
+          this.commands.set(cmdData.name, { data: cmdData, execute: cmdExecute });
+          this.logger.log(`✅ Loaded command: /${cmdData.name}`);
         } else {
           this.logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
         }
